@@ -21,9 +21,16 @@ export function generateCodeVerifier() {
 }
 
 export async function generateCodeChallenge(verifier) {
+  if (
+    typeof window === 'undefined' ||
+    !window.crypto ||
+    !window.crypto.subtle
+  ) {
+    throw new Error('Web Crypto API not available');
+  }
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
   return _base64UrlEncode(digest);
 }
 
