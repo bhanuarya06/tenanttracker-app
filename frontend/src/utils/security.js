@@ -4,8 +4,11 @@
  */
 
 function _randomBytes(length) {
+  if (typeof window === 'undefined' || !window.crypto || !window.crypto.getRandomValues) {
+    throw new Error('Web Crypto API not available');
+  }
   const buf = new Uint8Array(length);
-  crypto.getRandomValues(buf);
+  window.crypto.getRandomValues(buf);
   return buf;
 }
 
