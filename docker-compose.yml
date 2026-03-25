@@ -76,8 +76,13 @@ services:
     restart: unless-stopped
     ports:
       - '80:80'
+      - '443:443'
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt/live/tenanttracker.online/fullchain.pem:/etc/nginx/ssl/tenanttracker.online.crt:ro
+      - /etc/letsencrypt/live/tenanttracker.online/privkey.pem:/etc/nginx/ssl/tenanttracker.online.key:ro
+      # - ./nginx/ssl/tenanttracker.online.crt:/etc/nginx/ssl/tenanttracker.online.crt:ro
+      # - ./nginx/ssl/tenanttracker.online.key:/etc/nginx/ssl/tenanttracker.online.key:ro
     depends_on:
       - backend
       - frontend
