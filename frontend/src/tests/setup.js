@@ -1,3 +1,4 @@
+/* eslint-env node, jest */
 import '@testing-library/jest-dom';
 import { webcrypto } from 'node:crypto';
 

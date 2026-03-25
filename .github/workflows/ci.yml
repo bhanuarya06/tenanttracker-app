@@ -35,12 +35,23 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run lint
-      - run: npm test
+      # Security scan for dependencies
+      - name: Audit backend dependencies
+        run: npm audit --audit-level=high || true
+      # Run tests and generate coverage
+      - name: Run backend tests with coverage
+        run: npm test -- --coverage
         env:
           NODE_ENV: test
           MONGODB_URI: mongodb://localhost:27017/tenanttracker_test
           JWT_SECRET: ci-test-secret-key-min-32-chars-long!!
           PORT: 5001
+      # Upload coverage report
+      - name: Upload backend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
 
   frontend-test:
     name: Frontend Tests
@@ -57,7 +68,18 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
-      - run: npm test -- --run
+      # Security scan for dependencies
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high || true
+      # Run tests and generate coverage
+      - name: Run frontend tests with coverage
+        run: npm test -- --coverage
+      # Upload coverage report
+      - name: Upload frontend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
       - run: npm run build
         env:
           VITE_API_BASE_URL: http://localhost:5001

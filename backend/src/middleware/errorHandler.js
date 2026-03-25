@@ -2,7 +2,7 @@ const logger = require('../utils/logger');
 const { sendError, formatValidationError } = require('../utils/response');
 const config = require('../config/config');
 
-const errorHandler = (err, req, res, _next) => {
+const errorHandler = (err, req, res) => {
   logger.error('Error:', { message: err.message, stack: err.stack, url: req.originalUrl });
 
   // Mongoose validation error

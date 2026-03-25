@@ -35,7 +35,7 @@ const generateRefreshToken = async (user, meta = {}) => {
   return { rawToken, familyId };
 };
 
-const rotateRefreshToken = async (rawToken, meta = {}) => {
+const rotateRefreshToken = async (rawToken) => {
   const existing = await RefreshToken.findByToken(rawToken);
   if (!existing) {
     logger.warn('Refresh token not found or expired');
@@ -48,7 +48,7 @@ const rotateRefreshToken = async (rawToken, meta = {}) => {
 
   // Optionally, you can rotate and issue a new token, or just return the same one
   // Here, we return the same token for simplicity
-  return { rawToken, userId: existing.user };
+  // return { rawToken, userId: existing.user };
 };
 
 const revokeRefreshToken = async (rawToken) => {

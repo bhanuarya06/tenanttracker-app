@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { User } = require('../models');
 const tokenService = require('../services/tokenService');
 const emailService = require('../services/emailService');
-const { sendSuccess, sendError, AppError } = require('../utils/response');
+const { sendSuccess, sendError } = require('../utils/response');
 const config = require('../config/config');
 
 const setRefreshCookie = (res, token) => {

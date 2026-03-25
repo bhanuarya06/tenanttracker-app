@@ -46,13 +46,13 @@ describe('LoginPage', () => {
     renderWithProviders(<LoginPage />);
     expect(screen.getByPlaceholderText(/you@example\.com/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
   });
 
   it('shows validation errors for empty submit', async () => {
     const user = userEvent.setup();
     renderWithProviders(<LoginPage />);
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
     expect(screen.getByText(/email is required/i)).toBeInTheDocument();
     expect(screen.getByText(/password is required/i)).toBeInTheDocument();
   });
