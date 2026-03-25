@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['tenanttracker.online'],
     port: 5173,
     host: true,
     proxy: {
