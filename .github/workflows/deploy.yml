@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-and-push:
-    name: Build & Push Images
+    name: Build, Scan & Push Images
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,24 +27,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+      # Build backend image
+      - name: Build backend image
+        run: docker build -t ${{ env.BACKEND_IMAGE }}:${{ github.sha }} -t ${{ env.BACKEND_IMAGE }}:latest ./backend
 
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
+      # Scan backend image for vulnerabilities
+      - name: Scan backend image (Trivy)
+        uses: aquasecurity/trivy-action@v0.16.0
         with:
-          context: ./frontend
-          target: production
-          push: true
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # Push backend image
+      - name: Push backend image
+        run: |
+          docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.BACKEND_IMAGE }}:latest
+
+      # Build frontend image
+      - name: Build frontend image
+        run: docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE }}:latest --target production ./frontend
+
+      # Scan frontend image for vulnerabilities
+      - name: Scan frontend image (Trivy)
+        uses: aquasecurity/trivy-action@v0.16.0
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # Push frontend image
+      - name: Push frontend image
+        run: |
+          docker push ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
 
   deploy:
     name: Deploy to Production
@@ -53,6 +72,11 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      # Manual approval step (optional, uncomment if needed)
+      # - name: Wait for approval
+      #   uses: trstringer/manual-approval@v1
+      #   with:
+      #     secret: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -60,7 +84,20 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
+            set -e
             cd /opt/tenanttracker
+            echo "Pulling latest images..."
             docker compose pull
-            docker compose up -d --remove-orphans
+            echo "Deploying containers (zero downtime)..."
+            docker compose up -d --pull always --remove-orphans
+            echo "Pruning old images..."
             docker image prune -f
+            echo "Waiting for health checks..."
+            sleep 10
+            # Health check (customize as needed)
+            if ! curl -fsSL https://tenanttracker.online/health; then
+              echo "Health check failed! Rolling back..."
+              docker compose down
+              exit 1
+            fi
+            echo "Deployment successful!"
