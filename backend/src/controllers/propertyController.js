@@ -1,6 +1,6 @@
 const { Property, Tenant, Bill } = require('../models');
 const { sendSuccess, sendError } = require('../utils/response');
-const { paginate, buildSort, buildFilter, escapeRegex } = require('../utils/query');
+const { paginate, buildSort, escapeRegex } = require('../utils/query');
 
 exports.createProperty = async (req, res) => {
   const property = await Property.create({

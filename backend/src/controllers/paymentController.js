@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { Payment, Bill, Tenant } = require('../models');
-const { sendSuccess, sendError, AppError } = require('../utils/response');
+const { sendSuccess, AppError } = require('../utils/response');
 const { paginate, buildSort, escapeRegex } = require('../utils/query');
 const razorpayService = require('../services/razorpayService');
 const emailService = require('../services/emailService');

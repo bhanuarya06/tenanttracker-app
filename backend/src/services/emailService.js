@@ -1,3 +1,4 @@
+
 const { getTransporter } = require('../config/email');
 const config = require('../config/config');
 const logger = require('../utils/logger');
@@ -68,7 +69,7 @@ const sendBillNotification = async (tenant, bill) => {
   });
 };
 
-const sendPaymentConfirmation = async (tenant, payment, bill) => {
+const sendPaymentConfirmation = async (tenant, payment) => {
   const user = tenant.user || tenant;
   return sendEmail({
     to: user.email,
