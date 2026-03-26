@@ -85,7 +85,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -e
-            cd /opt/tenanttracker
+            cd tenanttracker-app
             echo "Pulling latest images..."
             docker compose pull
             echo "Deploying containers (zero downtime)..."
