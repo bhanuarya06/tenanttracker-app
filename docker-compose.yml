@@ -23,9 +23,7 @@ services:
   #     retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/bhanuarya06/tenanttracker-app/api:latest
     container_name: tenanttracker-api
     restart: unless-stopped
     ports:
@@ -34,13 +32,9 @@ services:
       - ./backend/.env
     environment:
       MONGODB_URI: mongodb+srv://vadinapallybhanu90:BcePpSZSFfbieIZv@tenanttracker.2dxthwg.mongodb.net/tenanttracker_v2
-
       NODE_ENV: development
       CORS_ORIGIN: http://localhost:5173
       FRONTEND_URL: http://localhost:5173
-    # depends_on:
-    #   mongodb:
-    #     condition: service_healthy
     volumes:
       - ./backend/src:/app/src
       - backend-uploads:/app/uploads
@@ -49,10 +43,7 @@ services:
       - tt-network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
+    image: ghcr.io/bhanuarya06/tenanttracker-app/web:latest
     container_name: tenanttracker-web
     restart: unless-stopped
     ports:
