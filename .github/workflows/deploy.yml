@@ -87,17 +87,16 @@ jobs:
             set -e
             cd tenanttracker-app
             echo "Pulling latest images..."
-            docker compose pull
+            docker-compose pull
             echo "Deploying containers (zero downtime)..."
-            docker compose up -d --pull always --remove-orphans
+            docker-compose up -d --pull always --remove-orphans
             echo "Pruning old images..."
             docker image prune -f
             echo "Waiting for health checks..."
             sleep 10
-            # Health check (customize as needed)
             if ! curl -fsSL https://tenanttracker.online/health; then
               echo "Health check failed! Rolling back..."
-              docker compose down
+              docker-compose down
               exit 1
             fi
             echo "Deployment successful!"
