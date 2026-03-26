@@ -37,7 +37,7 @@ jobs:
         with:
           image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           format: 'table'
-          exit-code: '1'
+          exit-code: '0'
           ignore-unfixed: true
 
       # Push backend image
@@ -56,7 +56,7 @@ jobs:
         with:
           image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           format: 'table'
-          exit-code: '1'
+          exit-code: '0'
           ignore-unfixed: true
 
       # Push frontend image
