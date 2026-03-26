@@ -17,7 +17,7 @@ export default function HomePage() {
           <div className="h-9 w-9 rounded-lg bg-primary-600 flex items-center justify-center">
             <Home className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-slate-900">TenantTracker</span>
+          <span className="text-xl font-bold text-slate-900">TenantTracker By Bhanu Prakash Vodinepally</span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 px-4 py-2">Sign in</Link>
