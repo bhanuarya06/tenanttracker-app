@@ -1,0 +1,5 @@
+HTTPS_SETUP.md
+backend/certs/cert.pem
+backend/certs/key.pem
+github-actions-deploy-key 2
+github-actions-deploy-key 2.pub
