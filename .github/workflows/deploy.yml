@@ -8,7 +8,7 @@ on:
 env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/${{ github.repository }}/api
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/web
+  WEB_IMAGE: ghcr.io/${{ github.repository }}/web
 
 jobs:
   build-and-push:
@@ -46,24 +46,24 @@ jobs:
           docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           docker push ${{ env.BACKEND_IMAGE }}:latest
 
-      # Build frontend image
-      - name: Build frontend image
-        run: docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE }}:latest --target production ./frontend
+      # Build edge web image (serves static frontend + proxies API)
+      - name: Build web image
+        run: docker build -f nginx/Dockerfile -t ${{ env.WEB_IMAGE }}:${{ github.sha }} -t ${{ env.WEB_IMAGE }}:latest .
 
-      # Scan frontend image for vulnerabilities
-      - name: Scan frontend image (Trivy)
+      # Scan web image for vulnerabilities
+      - name: Scan web image (Trivy)
         uses: aquasecurity/trivy-action@v0.16.0
         with:
-          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          image-ref: ${{ env.WEB_IMAGE }}:${{ github.sha }}
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true
 
-      # Push frontend image
-      - name: Push frontend image
+      # Push web image
+      - name: Push web image
         run: |
-          docker push ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          docker push ${{ env.FRONTEND_IMAGE }}:latest
+          docker push ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.WEB_IMAGE }}:latest
 
   deploy:
     name: Deploy to Production
@@ -86,10 +86,12 @@ jobs:
           script: |
             set -e
             cd tenanttracker-app
-            # Update docker-compose.yml to use new GHCR image tags
-            sed -i "s|image: ghcr.io/.*/api:.*|image: ghcr.io/${{ github.repository }}/api:${{ github.sha }}|" docker-compose.yml
-            sed -i "s|image: ghcr.io/.*/web:.*|image: ghcr.io/${{ github.repository }}/web:${{ github.sha }}|" docker-compose.yml
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
             echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            export BACKEND_IMAGE=ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+            export WEB_IMAGE=ghcr.io/${{ github.repository }}/web:${{ github.sha }}
             echo "Pulling latest images..."
             docker-compose pull
             echo "Deploying containers (zero downtime)..."
