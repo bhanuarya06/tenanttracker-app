@@ -1,0 +1,31 @@
+# Git & CI metadata
+.git
+.github
+.vscode
+
+# Documentation
+*.md
+
+# Secrets — must never be baked into a Docker image
+**/.env
+nginx/ssl/
+github-actions-deploy-key
+github-actions-deploy-key.pub
+
+# Node dependencies (installed fresh inside the container)
+frontend/node_modules/
+backend/node_modules/
+
+# Build outputs
+frontend/dist/
+
+# Test and coverage artifacts
+**/coverage/
+**/tests/
+
+# Logs
+**/*.log
+**/logs/
+
+# Backend uploaded files (managed via Docker volumes, not image layers)
+backend/uploads/
