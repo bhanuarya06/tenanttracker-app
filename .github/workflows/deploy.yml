@@ -38,7 +38,7 @@ jobs:
             ./backend
 
       - name: Scan backend image for vulnerabilities
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.16.0
         with:
           image-ref:      ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           format:         table
@@ -62,7 +62,7 @@ jobs:
             .
 
       - name: Scan web image for vulnerabilities
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.16.0
         with:
           image-ref:      ${{ env.WEB_IMAGE }}:${{ github.sha }}
           format:         table
