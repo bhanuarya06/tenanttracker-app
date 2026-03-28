@@ -2,12 +2,13 @@ FROM node:20-alpine3.19
 
 WORKDIR /app
 
+# Install production dependencies only (devDependencies are not needed at runtime)
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --omit=dev
 
 COPY src/ ./src/
 
-# Create uploads directory
+# Persistent volume mount point for tenant-uploaded files
 RUN mkdir -p uploads
 
 EXPOSE 5001
