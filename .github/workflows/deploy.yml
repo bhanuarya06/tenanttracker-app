@@ -120,8 +120,15 @@ jobs:
             echo "Pulling new images..."
             $COMPOSE pull
 
-            echo "Starting containers..."
-            $COMPOSE up -d --remove-orphans
+            # Stop and remove old containers before starting new ones.
+            # Required workaround for docker-compose v1 bug: it crashes with
+            # KeyError 'ContainerConfig' when trying to recreate containers
+            # built with newer Docker image formats.
+            echo "Stopping old containers..."
+            $COMPOSE down
+
+            echo "Starting new containers..."
+            $COMPOSE up -d
 
             echo "Pruning old images..."
             docker image prune -f
