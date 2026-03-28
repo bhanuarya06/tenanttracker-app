@@ -48,7 +48,7 @@ jobs:
 
       # Build edge web image (serves static frontend + proxies API)
       - name: Build web image
-        run: docker build -f nginx/Dockerfile -t ${{ env.WEB_IMAGE }}:${{ github.sha }} -t ${{ env.WEB_IMAGE }}:latest .
+        run: docker build -f frontend/Dockerfile -t ${{ env.WEB_IMAGE }}:${{ github.sha }} -t ${{ env.WEB_IMAGE }}:latest .
 
       # Scan web image for vulnerabilities
       - name: Scan web image (Trivy)
