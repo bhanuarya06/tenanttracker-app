@@ -1,6 +1,3 @@
-version: '3.8'
-
-
 services:
   # mongodb:
   #   image: mongo:7
@@ -23,7 +20,7 @@ services:
   #     retries: 5
 
   backend:
-    image: ghcr.io/bhanuarya06/tenanttracker-app/api:latest
+    image: ${BACKEND_IMAGE:-ghcr.io/bhanuarya06/tenanttracker-app/api:latest}
     container_name: tenanttracker-api
     restart: unless-stopped
     ports:
@@ -32,56 +29,34 @@ services:
       - ./backend/.env
     environment:
       MONGODB_URI: mongodb+srv://vadinapallybhanu90:BcePpSZSFfbieIZv@tenanttracker.2dxthwg.mongodb.net/tenanttracker_v2
-      NODE_ENV: development
-      CORS_ORIGIN: http://localhost:5173
-      FRONTEND_URL: http://localhost:5173
+      NODE_ENV: production
+      CORS_ORIGIN: https://tenanttracker.online
+      FRONTEND_URL: https://tenanttracker.online
+      OIDC_ISSUER: https://tenanttracker.online
+      OIDC_REDIRECT_URIS: https://tenanttracker.online/auth/callback/google,https://tenanttracker.online/auth/callback/github
     volumes:
-      - ./backend/src:/app/src
       - backend-uploads:/app/uploads
-      - /app/node_modules
-    networks:
-      - tt-network
-
-  frontend:
-    image: ghcr.io/bhanuarya06/tenanttracker-app/web:latest
-    container_name: tenanttracker-web
-    restart: unless-stopped
-    ports:
-      - '5173:5173'
-    environment:
-      VITE_API_BASE_URL: /api
-      VITE_PROXY_TARGET: http://backend:5001
-    env_file:
-      - ./frontend/.env
-    volumes:
-      - ./frontend/src:/app/src
-      - /app/node_modules
-    depends_on:
-      - backend
     networks:
       - tt-network
 
   nginx:
-    image: nginx:alpine
+    image: ${WEB_IMAGE:-ghcr.io/bhanuarya06/tenanttracker-app/web:latest}
     container_name: tenanttracker-nginx
     restart: unless-stopped
     ports:
       - '80:80'
       - '443:443'
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt/live/tenanttracker.online/fullchain.pem:/etc/nginx/ssl/tenanttracker.online.crt:ro
       - /etc/letsencrypt/live/tenanttracker.online/privkey.pem:/etc/nginx/ssl/tenanttracker.online.key:ro
       # - ./nginx/ssl/tenanttracker.online.crt:/etc/nginx/ssl/tenanttracker.online.crt:ro
       # - ./nginx/ssl/tenanttracker.online.key:/etc/nginx/ssl/tenanttracker.online.key:ro
     depends_on:
       - backend
-      - frontend
     networks:
       - tt-network
 
 volumes:
-  mongo-data:
   backend-uploads:
 
 networks:
