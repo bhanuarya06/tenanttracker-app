@@ -1,6 +1,7 @@
 const router = require('express').Router();
 
 router.use('/auth', require('./auth'));
+router.use('/api/auth', require('./auth'));
 router.use('/', require('./oauth2'));
 router.use('/api/properties', require('./properties'));
 router.use('/api/tenants', require('./tenants'));
