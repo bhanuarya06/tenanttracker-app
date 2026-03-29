@@ -42,10 +42,10 @@ jobs:
       - name: Build web image
         run: |
           docker build \
-            -f nginx/Dockerfile \
+            -f frontend/Dockerfile \
             -t ${{ env.WEB_IMAGE }}:${{ github.sha }} \
             -t ${{ env.WEB_IMAGE }}:latest \
-            .
+            ./frontend
       - name: Push web image
         run: |
           docker push ${{ env.WEB_IMAGE }}:${{ github.sha }}
