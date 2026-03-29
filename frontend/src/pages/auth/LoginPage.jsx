@@ -45,7 +45,7 @@ export default function LoginPage() {
             <div className="h-12 w-12 rounded-xl bg-primary-600 flex items-center justify-center">
               <Home className="h-7 w-7 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">TenantTracker</span>
+            <Link to="/"><span className="text-2xl font-bold text-white">TenantTracker</span></Link>
           </div>
           <h1 className="text-4xl font-bold text-white leading-tight mb-4">
             Manage your properties with clarity
@@ -63,7 +63,7 @@ export default function LoginPage() {
             <div className="h-10 w-10 rounded-lg bg-primary-600 flex items-center justify-center">
               <Home className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-900">TenantTracker</span>
+            <Link to="/"><span className="text-xl font-bold text-slate-900">TenantTracker</span></Link>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900 mb-1">Welcome back</h2>
