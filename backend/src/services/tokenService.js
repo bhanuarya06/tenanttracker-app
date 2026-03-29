@@ -42,13 +42,11 @@ const rotateRefreshToken = async (rawToken) => {
     return null;
   }
 
-  // Do NOT mark as used or revoke family; allow multiple uses until expiry/revocation
+  // Reuse the same token — allows multiple tabs without invalidating other sessions
   existing.lastUsedAt = new Date();
   await existing.save();
 
-  // Optionally, you can rotate and issue a new token, or just return the same one
-  // Here, we return the same token for simplicity
-  // return { rawToken, userId: existing.user };
+  return { rawToken, userId: existing.user };
 };
 
 const revokeRefreshToken = async (rawToken) => {
