@@ -77,14 +77,14 @@ jobs:
             export BACKEND_IMAGE="${BACKEND_IMAGE}:${{ github.sha }}"
             export WEB_IMAGE="${WEB_IMAGE}:${{ github.sha }}"
 
-            docker compose pull
-            docker compose up -d --remove-orphans
+            docker-compose pull
+            docker-compose up -d --remove-orphans
 
             echo "Running health check (waiting 15s for containers to stabilise)..."
             sleep 15
             if ! curl -fsS https://tenanttracker.online/health; then
               echo "Health check failed — rolling back"
-              docker compose down
+              docker-compose down
               exit 1
             fi
 
