@@ -43,6 +43,10 @@ jobs:
         run: |
           docker build \
             -f frontend/Dockerfile \
+            --build-arg VITE_API_BASE_URL=/api \
+            --build-arg VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }} \
+            --build-arg VITE_RAZORPAY_KEY_ID=${{ secrets.VITE_RAZORPAY_KEY_ID }} \
+            --build-arg VITE_GITHUB_CLIENT_ID=${{ secrets.VITE_GITHUB_CLIENT_ID }} \
             -t ${{ env.WEB_IMAGE }}:${{ github.sha }} \
             -t ${{ env.WEB_IMAGE }}:latest \
             ./frontend

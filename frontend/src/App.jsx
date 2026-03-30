@@ -45,8 +45,6 @@ import RecordPaymentPage from './pages/payments/RecordPaymentPage';
 import ProfilePage from './pages/user/ProfilePage';
 import ContactPage from './pages/user/ContactPage';
 
-console.log('VITE_GOOGLE_CLIENT_ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-
 function AuthInitializer({ children }) {
   useAuth();
   return <>{children}</>;
