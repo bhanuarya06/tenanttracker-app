@@ -22,27 +22,27 @@ services:
     networks:
       - tt-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: tenanttracker-web
-    restart: unless-stopped
-    ports:
-      - '5173:5173'
-    environment:
-      VITE_API_BASE_URL: /api
-      VITE_PROXY_TARGET: http://backend:5001
-    env_file:
-      - ./frontend/.env
-    volumes:
-      - ./frontend/src:/app/src
-      - /app/node_modules
-    depends_on:
-      - backend
-    networks:
-      - tt-network
+  # frontend:  # dev-only Vite server, not needed in production (nginx serves the built frontend)
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: tenanttracker-web
+  #   restart: unless-stopped
+  #   ports:
+  #     - '5173:5173'
+  #   environment:
+  #     VITE_API_BASE_URL: /api
+  #     VITE_PROXY_TARGET: http://backend:5001
+  #   env_file:
+  #     - ./frontend/.env
+  #   volumes:
+  #     - ./frontend/src:/app/src
+  #     - /app/node_modules
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - tt-network
 
   nginx:
     image: ${WEB_IMAGE:-ghcr.io/bhanuarya06/tenanttracker-app/web:latest}
