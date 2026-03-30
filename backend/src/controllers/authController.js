@@ -60,6 +60,9 @@ exports.register = async (req, res) => {
 
   setRefreshCookie(res, rawToken);
 
+  // Best-effort welcome email
+  emailService.sendWelcomeEmail(user).catch(() => {});
+
   return sendSuccess(res, 'Registration successful', {
     user: formatUser(user),
     accessToken,
