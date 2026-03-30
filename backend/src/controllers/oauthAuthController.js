@@ -4,6 +4,7 @@ const oauthProviderService = require('../services/oauthProviderService');
 const config = require('../config/config');
 const logger = require('../utils/logger');
 const { sendSuccess, sendError } = require('../utils/response');
+const emailService = require('../services/emailService');
 
 // POST /auth/oauth/:provider/callback
 const providerCallback = async (req, res) => {
@@ -179,6 +180,8 @@ async function _findOrCreateUser(profile) {
     isEmailVerified: emailVerified || false,
     oauthProviders: [{ provider, providerId, email, displayName: `${firstName} ${lastName}`.trim(), avatar, linkedAt: new Date() }],
   });
+
+  emailService.sendWelcomeEmail(user).catch(() => {});
 
   logger.info(`New user created via ${provider}: ${email}`, { userId: user._id });
   return { user, isNewUser: true };
