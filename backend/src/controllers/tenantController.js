@@ -1,6 +1,7 @@
 const { User, Tenant, Property, Bill, Payment } = require('../models');
 const { sendSuccess, sendError } = require('../utils/response');
 const { paginate, buildSort, escapeRegex } = require('../utils/query');
+const emailService = require('../services/emailService');
 
 exports.createTenant = async (req, res) => {
   const { user: userData, property: propertyId, unit, rentType, monthlyRent, leaseDetails, occupantCount, occupants, emergencyContacts, preferences, status, moveInDate, notes } = req.body;
@@ -15,6 +16,7 @@ exports.createTenant = async (req, res) => {
 
   // Handle user: either existing userId or create new user
   let tenantUser;
+  let tempPassword = null;
   if (typeof userData === 'string') {
     tenantUser = await User.findById(userData);
     if (!tenantUser) return sendError(res, 'User not found', 404);
@@ -22,6 +24,12 @@ exports.createTenant = async (req, res) => {
     // Check if email already exists
     const existing = await User.findOne({ email: userData.email.toLowerCase() });
     if (existing) return sendError(res, 'A user with this email already exists', 409);
+
+    // Generate temp password if none provided
+    if (!userData.password) {
+      tempPassword = Math.random().toString(36).slice(-8) + 'T1!';
+      userData.password = tempPassword;
+    }
 
     tenantUser = await User.create({
       ...userData,
@@ -56,6 +64,12 @@ exports.createTenant = async (req, res) => {
   const populated = await Tenant.findById(tenant._id)
     .populate('user', 'firstName lastName email phone avatar')
     .populate('property', 'name address propertyType');
+
+  // Best-effort onboarding email to the tenant
+  const owner = await User.findById(req.user.userId).select('firstName lastName');
+  if (owner) {
+    emailService.sendTenantOnboardingEmail(tenantUser, owner, property, tempPassword).catch(() => {});
+  }
 
   return sendSuccess(res, 'Tenant added successfully', { tenant: populated }, null, 201);
 };

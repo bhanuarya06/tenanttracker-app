@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Payment, Bill, Tenant } = require('../models');
+const { Payment, Bill, Tenant, User } = require('../models');
 const { sendSuccess, sendError, AppError } = require('../utils/response');
 const { paginate, buildSort, escapeRegex } = require('../utils/query');
 const razorpayService = require('../services/razorpayService');
@@ -40,11 +40,13 @@ exports.createPayment = async (req, res) => {
   bill.updatedBy = req.user.userId;
   await bill.save();
 
-  // Best-effort email confirmation
-  try {
-    await emailService.sendPaymentConfirmation(bill.tenant, payment, bill);
-  } catch (err) {
-    logger.warn('Failed to send payment confirmation email', { error: err.message });
+  // Best-effort email confirmation to tenant
+  emailService.sendPaymentConfirmation(bill.tenant, payment, bill).catch(() => {});
+
+  // Notify the owner
+  const owner = await User.findById(req.user.userId).select('firstName lastName email');
+  if (owner) {
+    emailService.sendOwnerPaymentAlert(owner, bill.tenant.user || bill.tenant, payment, bill).catch(() => {});
   }
 
   sendSuccess(res, 'Payment recorded', payment, null, 201);
@@ -241,10 +243,12 @@ exports.verifyPayment = async (req, res) => {
   // Email confirmation
   const tenant = await Tenant.findById(payment.tenant).populate('user', 'firstName lastName email');
   if (tenant) {
-    try {
-      await emailService.sendPaymentConfirmation(tenant, payment, bill);
-    } catch (err) {
-      logger.warn('Payment confirmation email failed', { error: err.message });
+    emailService.sendPaymentConfirmation(tenant, payment, bill).catch(() => {});
+
+    // Notify owner
+    const owner = await User.findById(payment.owner).select('firstName lastName email');
+    if (owner && bill) {
+      emailService.sendOwnerPaymentAlert(owner, tenant.user || tenant, payment, bill).catch(() => {});
     }
   }
 
