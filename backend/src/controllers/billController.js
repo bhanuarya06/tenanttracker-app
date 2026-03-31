@@ -46,7 +46,7 @@ exports.getBills = async (req, res) => {
   if (req.user.role === 'tenant') {
     const tenant = await Tenant.findOne({ user: req.user.userId });
     if (!tenant) return sendError(res, 'No tenancy found', 404);
-    filter = { tenant: tenant._id };
+    filter = { tenant: tenant._id, status: { $ne: 'draft' } };
   } else {
     filter = { owner: req.user.userId };
     if (filterTenant) filter.tenant = filterTenant;
@@ -121,6 +121,15 @@ exports.updateBill = async (req, res) => {
   const blocked = ['tenant', 'property', 'owner', 'createdBy'];
   blocked.forEach((f) => delete req.body[f]);
 
+  // Prevent setting status=paid directly — payment recording (POST /payments) must be used instead
+  if (req.body.status === 'paid') {
+    return sendError(
+      res,
+      'Cannot mark a bill as paid directly. Use "Record Payment" to record an actual payment transaction.',
+      400
+    );
+  }
+
   const bill = await Bill.findOne({ _id: req.params.id, owner: req.user.userId });
   if (!bill) return sendError(res, 'Bill not found', 404);
 
@@ -152,7 +161,7 @@ exports.sendBill = async (req, res) => {
   if (!bill) return sendError(res, 'Bill not found', 404);
   if (bill.status !== 'draft') return sendError(res, 'Only draft bills can be sent', 400);
 
-  bill.status = 'sent';
+  bill.status = 'issued';
   bill.reminders.push({ sentAt: new Date(), type: 'initial', method: 'email' });
   await bill.save();
 
@@ -179,7 +188,7 @@ exports.getBillsSummary = async (req, res) => {
     if (item._id === 'paid') {
       summary.paid = item.count;
       summary.paidAmount = item.paidAmount;
-    } else if (['sent', 'partial'].includes(item._id)) {
+    } else if (['issued', 'partial'].includes(item._id)) {
       summary.outstanding += item.count;
       summary.outstandingAmount += item.totalAmount - item.paidAmount;
     }

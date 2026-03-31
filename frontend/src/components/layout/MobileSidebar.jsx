@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { X, LayoutDashboard, Building2, Users, Receipt, CreditCard, Home } from 'lucide-react';
+import { X, LayoutDashboard, Building2, Users, Receipt, CreditCard, Home, FileText } from 'lucide-react';
 import { closeMobileSidebar } from '../../store/slices/uiSlice';
 import { APP_NAME, ROLES } from '../../config/constants';
 
@@ -14,6 +14,7 @@ const ownerNav = [
 
 const tenantNav = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/tenant/portal', icon: FileText, label: 'My Lease' },
   { to: '/bills', icon: Receipt, label: 'My Bills' },
   { to: '/payments', icon: CreditCard, label: 'Payments' },
 ];

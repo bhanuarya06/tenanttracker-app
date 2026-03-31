@@ -41,6 +41,9 @@ import BillDetailPage from './pages/bills/BillDetailPage';
 import PaymentsPage from './pages/payments/PaymentsPage';
 import RecordPaymentPage from './pages/payments/RecordPaymentPage';
 
+// Tenant
+import TenantPortalPage from './pages/tenant/TenantPortalPage';
+
 // User
 import ProfilePage from './pages/user/ProfilePage';
 import ContactPage from './pages/user/ContactPage';
@@ -100,6 +103,9 @@ export default function App() {
           {/* Payments — all roles */}
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/payments/record" element={<ProtectedRoute roles={['owner', 'admin']}><RecordPaymentPage /></ProtectedRoute>} />
+
+          {/* Tenant portal — tenant role only */}
+          <Route path="/tenant/portal" element={<ProtectedRoute roles={['tenant']}><TenantPortalPage /></ProtectedRoute>} />
 
           {/* Profile & Contact — all roles */}
           <Route path="/profile" element={<ProfilePage />} />

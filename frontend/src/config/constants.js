@@ -27,7 +27,7 @@ export const RENT_TYPES = [
 
 export const BILL_STATUS = [
   { value: 'draft', label: 'Draft', color: 'slate' },
-  { value: 'sent', label: 'Sent', color: 'blue' },
+  { value: 'issued', label: 'Issued', color: 'blue' },
   { value: 'partial', label: 'Partial', color: 'amber' },
   { value: 'paid', label: 'Paid', color: 'emerald' },
   { value: 'overdue', label: 'Overdue', color: 'rose' },
@@ -52,8 +52,11 @@ export const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'check', label: 'Check' },
   { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'online', label: 'Online (Razorpay)' },
   { value: 'upi', label: 'UPI' },
+  { value: 'credit_card', label: 'Credit Card' },
+  { value: 'debit_card', label: 'Debit Card' },
+  { value: 'online', label: 'Online' },
+  { value: 'razorpay', label: 'Razorpay' },
   { value: 'other', label: 'Other' },
 ];
 

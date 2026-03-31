@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Send, Trash2, CreditCard, Edit3, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import billService from '../../services/billService';
-import paymentService from '../../services/paymentService';
+// import paymentService from '../../services/paymentService'; // TODO: tenant online payment not yet implemented
 import { deleteBill, updateBill } from '../../store/slices/billSlice';
 import BackButton from '../../components/ui/BackButton';
 import Card from '../../components/ui/Card';
@@ -11,7 +11,7 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
-import { BILL_STATUS, CHARGE_TYPES, MONTHS, ROLES } from '../../config/constants';
+import { BILL_STATUS, MONTHS, ROLES } from '../../config/constants';
 import toast from 'react-hot-toast';
 
 export default function BillDetailPage() {
@@ -27,7 +27,7 @@ export default function BillDetailPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [sending, setSending] = useState(false);
-  const [paying, setPaying] = useState(false);
+  // const [paying, setPaying] = useState(false); // TODO: tenant online payment not yet implemented
 
   useEffect(() => {
     billService.getById(id).then((data) => {
@@ -68,45 +68,59 @@ export default function BillDetailPage() {
     } finally { setDeleting(false); setShowDelete(false); }
   };
 
-  const handlePayOnline = async () => {
-    setPaying(true);
-    try {
-      const order = await paymentService.createOrder(id);
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: 'TenantTracker',
-        description: `Bill Payment`,
-        order_id: order.orderId,
-        handler: async (response) => {
-          try {
-            await paymentService.verifyPayment({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            });
-            toast.success('Payment successful!');
-            // Reload bill
-            const data = await billService.getById(id);
-            setBill(data.bill);
-            setPayments(data.payments || []);
-          } catch { toast.error('Payment verification failed'); }
-        },
-        theme: { color: '#4F46E5' },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to initiate payment');
-    } finally { setPaying(false); }
-  };
+  // TODO: tenant online payment (Razorpay) — not yet implemented
+  // const handlePayOnline = async () => {
+  //   setPaying(true);
+  //   try {
+  //     const order = await paymentService.createOrder(id);
+  //     const options = {
+  //       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+  //       amount: order.amount,
+  //       currency: order.currency,
+  //       name: 'TenantTracker',
+  //       description: `Bill Payment`,
+  //       order_id: order.orderId,
+  //       handler: async (response) => {
+  //         try {
+  //           await paymentService.verifyPayment({
+  //             razorpayOrderId: response.razorpay_order_id,
+  //             razorpayPaymentId: response.razorpay_payment_id,
+  //             razorpaySignature: response.razorpay_signature,
+  //           });
+  //           toast.success('Payment successful!');
+  //           const data = await billService.getById(id);
+  //           setBill(data.bill);
+  //           setPayments(data.payments || []);
+  //         } catch { toast.error('Payment verification failed'); }
+  //       },
+  //       theme: { color: '#4F46E5' },
+  //     };
+  //     const rzp = new window.Razorpay(options);
+  //     rzp.open();
+  //   } catch (err) {
+  //     toast.error(err.response?.data?.message || 'Failed to initiate payment');
+  //   } finally { setPaying(false); }
+  // };
 
   if (loading) return <PageLoader />;
   if (!bill) return <p className="text-slate-500">Bill not found.</p>;
+  if (!isOwner && bill.status === 'draft') return <p className="text-slate-500">Bill not found.</p>;
 
   const statusInfo = BILL_STATUS.find((s) => s.value === bill.status);
   const remaining = (bill.totalAmount || 0) - (bill.paidAmount || 0);
+
+  const flattenCharges = (charges) => {
+    if (!charges) return [];
+    const lines = [];
+    if (charges.rent > 0) lines.push({ label: 'Rent', value: charges.rent });
+    const UTILITY_LABELS = { water: 'Water', electricity: 'Electricity', gas: 'Gas', internet: 'Internet', trash: 'Trash' };
+    const u = charges.utilities || {};
+    Object.entries(UTILITY_LABELS).forEach(([k, label]) => { if (u[k] > 0) lines.push({ label, value: u[k] }); });
+    const DIRECT_LABELS = { maintenance: 'Maintenance', parking: 'Parking', petFee: 'Pet Fee', lateFee: 'Late Fee' };
+    Object.entries(DIRECT_LABELS).forEach(([k, label]) => { if (charges[k] > 0) lines.push({ label, value: charges[k] }); });
+    (charges.additionalCharges || []).forEach((a) => { if (a.amount > 0) lines.push({ label: a.description, value: a.amount }); });
+    return lines;
+  };
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -123,15 +137,15 @@ export default function BillDetailPage() {
           {isOwner && bill.status === 'draft' && (
             <Button size="sm" onClick={handleSend} loading={sending}><Send size={16} /> Send to Tenant</Button>
           )}
-          {isOwner && bill.status === 'sent' && (
+          {isOwner && bill.status === 'issued' && (
             <Button size="sm" variant="warning" onClick={() => handleStatusChange('overdue', 'Overdue')}>
               <AlertTriangle size={16} /> Mark Overdue
             </Button>
           )}
-          {isOwner && ['sent', 'partial', 'overdue'].includes(bill.status) && (
-            <Button size="sm" variant="success" onClick={() => handleStatusChange('paid', 'Paid')}>
-              <CheckCircle size={16} /> Mark Paid
-            </Button>
+          {isOwner && remaining > 0 && !['paid', 'cancelled'].includes(bill.status) && (
+            <Link to={`/payments/record?bill=${id}`}>
+              <Button size="sm" variant="success"><CheckCircle size={16} /> Record Payment</Button>
+            </Link>
           )}
           {isOwner && !['paid', 'cancelled'].includes(bill.status) && (
             <Button size="sm" variant="secondary" onClick={() => handleStatusChange('cancelled', 'Cancelled')}>
@@ -139,7 +153,9 @@ export default function BillDetailPage() {
             </Button>
           )}
           {!isOwner && remaining > 0 && (
-            <Button size="sm" onClick={handlePayOnline} loading={paying}><CreditCard size={16} /> Pay ₹{remaining.toLocaleString()}</Button>
+            <div title="Online payment coming soon">
+              <Button size="sm" disabled><CreditCard size={16} /> Pay ₹{remaining.toLocaleString()}</Button>
+            </div>
           )}
           {isOwner && !['paid', 'cancelled'].includes(bill.status) && (
             <Link to={`/bills/${id}/edit`}><Button variant="outline" size="sm"><Edit3 size={16} /> Edit</Button></Link>
@@ -174,15 +190,12 @@ export default function BillDetailPage() {
       <Card>
         <Card.Title>Charges Breakdown</Card.Title>
         <div className="mt-4 space-y-2">
-          {bill.charges && Object.entries(bill.charges).filter(([, v]) => v > 0).map(([key, value]) => {
-            const chargeInfo = CHARGE_TYPES.find((c) => c.key === key);
-            return (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                <span className="text-sm text-slate-600">{chargeInfo?.label || key}</span>
-                <span className="text-sm font-medium text-slate-900">₹{value.toLocaleString()}</span>
-              </div>
-            );
-          })}
+          {flattenCharges(bill.charges).map(({ label, value }, i) => (
+            <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+              <span className="text-sm text-slate-600">{label}</span>
+              <span className="text-sm font-medium text-slate-900">₹{value.toLocaleString()}</span>
+            </div>
+          ))}
           {bill.previousBalance > 0 && (
             <div className="flex items-center justify-between py-2 border-b border-slate-100">
               <span className="text-sm text-slate-600">Previous Balance</span>
@@ -210,7 +223,7 @@ export default function BillDetailPage() {
               <div key={p._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-slate-900">₹{p.amount?.toLocaleString()}</p>
-                  <p className="text-xs text-slate-500 capitalize">{p.method} · {new Date(p.paymentDate || p.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500 capitalize">{p.paymentMethod?.replace(/_/g, ' ')} · {new Date(p.paymentDate || p.createdAt).toLocaleDateString()}</p>
                 </div>
                 <Badge color={p.status === 'completed' ? 'emerald' : 'amber'}>{p.status}</Badge>
               </div>

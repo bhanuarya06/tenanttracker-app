@@ -4,7 +4,7 @@ const { paginate, buildSort, escapeRegex } = require('../utils/query');
 const emailService = require('../services/emailService');
 
 exports.createTenant = async (req, res) => {
-  const { user: userData, property: propertyId, unit, rentType, monthlyRent, leaseDetails, occupantCount, occupants, emergencyContacts, preferences, status, moveInDate, notes } = req.body;
+  const { user: userData, property: propertyId, unit, rentType, monthlyRent, securityDeposit, leaseDetails, occupantCount, occupants, emergencyContacts, preferences, status, moveInDate, notes } = req.body;
 
   // Verify property ownership
   const property = await Property.findOne({ _id: propertyId, owner: req.user.userId });
@@ -44,6 +44,7 @@ exports.createTenant = async (req, res) => {
     owner: req.user.userId,
     rentType,
     monthlyRent,
+    securityDeposit: securityDeposit || 0,
     leaseDetails: rentType === 'lease' ? leaseDetails : undefined,
     occupantCount: occupantCount || (occupants?.length || 1),
     occupants,
@@ -117,7 +118,7 @@ exports.getTenantById = async (req, res) => {
   const totalBilled = bills.reduce((s, b) => s + (b.totalAmount || 0), 0);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = bills
-    .filter((b) => ['sent', 'partial', 'overdue'].includes(b.status))
+    .filter((b) => ['issued', 'partial', 'overdue'].includes(b.status))
     .reduce((s, b) => s + b.remainingBalance, 0);
   const overdue = bills
     .filter((b) => b.isOverdue)
@@ -190,7 +191,7 @@ exports.deleteTenant = async (req, res) => {
 
   const outstandingBills = await Bill.countDocuments({
     tenant: tenant._id,
-    status: { $in: ['sent', 'partial', 'overdue'] },
+    status: { $in: ['issued', 'partial', 'overdue'] },
   });
   if (outstandingBills > 0) {
     return sendError(res, 'Cannot delete tenant with outstanding bills', 400);
@@ -228,13 +229,15 @@ exports.getTenantDashboard = async (req, res) => {
 
   if (!tenant) return sendError(res, 'No active tenancy found', 404);
 
-  const bills = await Bill.find({ tenant: tenant._id }).sort('-billingPeriod.year -billingPeriod.month').limit(12);
-  const payments = await Payment.find({ tenant: tenant._id, status: 'completed' }).sort('-paymentDate').limit(10);
+  const [bills, payments] = await Promise.all([
+    Bill.find({ tenant: tenant._id, status: { $ne: 'draft' } }).sort('-billingPeriod.year -billingPeriod.month').limit(12),
+    Payment.find({ tenant: tenant._id, status: 'completed' }).sort('-paymentDate').limit(10),
+  ]);
 
-  const currentBill = bills.find((b) => ['sent', 'partial', 'overdue'].includes(b.status));
+  const currentBill = bills.find((b) => ['issued', 'partial', 'overdue'].includes(b.status));
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = bills
-    .filter((b) => ['sent', 'partial', 'overdue'].includes(b.status))
+    .filter((b) => ['issued', 'partial', 'overdue'].includes(b.status))
     .reduce((s, b) => s + b.remainingBalance, 0);
 
   return sendSuccess(res, 'Dashboard fetched', {
@@ -243,7 +246,7 @@ exports.getTenantDashboard = async (req, res) => {
       monthlyRent: tenant.monthlyRent,
       outstanding,
       totalPaid,
-      securityDeposit: tenant.leaseDetails?.securityDeposit || 0,
+      securityDeposit: tenant.securityDeposit || 0,
       rentType: tenant.rentType,
       leaseStatus: tenant.leaseStatus,
     },

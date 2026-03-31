@@ -106,9 +106,9 @@ export default function EditBillPage() {
 
   // Determine which statuses the owner can transition to
   const allowedStatuses = BILL_STATUS.filter((s) => {
-    if (bill.status === 'draft') return ['draft', 'sent', 'cancelled'].includes(s.value);
-    if (bill.status === 'sent') return ['sent', 'overdue', 'cancelled'].includes(s.value);
-    if (bill.status === 'partial') return ['partial', 'paid', 'overdue', 'cancelled'].includes(s.value);
+    if (bill.status === 'draft') return ['draft', 'issued', 'cancelled'].includes(s.value);
+    if (bill.status === 'issued') return ['issued', 'overdue', 'cancelled'].includes(s.value);
+    if (bill.status === 'partial') return ['partial', 'overdue', 'cancelled'].includes(s.value);
     if (bill.status === 'overdue') return ['overdue', 'cancelled'].includes(s.value);
     return s.value === bill.status;
   });

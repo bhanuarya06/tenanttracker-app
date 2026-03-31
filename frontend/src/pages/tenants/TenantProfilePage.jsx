@@ -96,6 +96,9 @@ export default function TenantProfilePage() {
             <div><span className="text-slate-500">Type:</span> <span className="font-medium capitalize">{tenant.rentType}</span></div>
             <div><span className="text-slate-500">Occupants:</span> <span className="font-medium">{tenant.occupantCount || 1}</span></div>
             {tenant.moveInDate && <div><span className="text-slate-500">Move-in:</span> <span className="font-medium">{new Date(tenant.moveInDate).toLocaleDateString()}</span></div>}
+            {tenant.securityDeposit > 0 && (
+              <div><span className="text-slate-500">Security deposit:</span> <span className="font-medium text-violet-700">₹{tenant.securityDeposit.toLocaleString()}</span></div>
+            )}
           </div>
         </Card>
       </div>
@@ -103,7 +106,7 @@ export default function TenantProfilePage() {
       {tenant.rentType === 'lease' && tenant.leaseDetails && (
         <Card>
           <Card.Title>Lease Details</Card.Title>
-          <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
             <div>
               <span className="text-slate-500">Start:</span>
               <span className="font-medium ml-1">{new Date(tenant.leaseDetails.startDate).toLocaleDateString()}</span>
@@ -112,12 +115,6 @@ export default function TenantProfilePage() {
               <span className="text-slate-500">End:</span>
               <span className="font-medium ml-1">{new Date(tenant.leaseDetails.endDate).toLocaleDateString()}</span>
             </div>
-            {tenant.leaseDetails.securityDeposit && (
-              <div>
-                <span className="text-slate-500">Deposit:</span>
-                <span className="font-medium ml-1">₹{tenant.leaseDetails.securityDeposit.toLocaleString()}</span>
-              </div>
-            )}
           </div>
         </Card>
       )}

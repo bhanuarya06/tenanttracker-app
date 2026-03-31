@@ -41,7 +41,7 @@ exports.getOwnerDashboard = async (req, res) => {
       {
         $match: {
           owner: ownerOid,
-          status: { $in: ['sent', 'partial', 'overdue'] },
+          status: { $in: ['issued', 'partial', 'overdue'] },
         },
       },
       {

@@ -67,6 +67,7 @@ export default function AddTenantPage() {
         unit: form.unitNumber,
         monthlyRent: Number(form.monthlyRent),
         rentType: form.rentType,
+        securityDeposit: Number(form.securityDeposit) || 0,
         occupantCount: Number(form.occupantCount) || 1,
         moveInDate: form.moveInDate || undefined,
       };
@@ -74,7 +75,6 @@ export default function AddTenantPage() {
         payload.leaseDetails = {
           startDate: form.leaseStart,
           endDate: form.leaseEnd,
-          ...(form.securityDeposit && { securityDeposit: Number(form.securityDeposit) }),
         };
       }
       await dispatch(createTenant(payload)).unwrap();
@@ -121,7 +121,10 @@ export default function AddTenantPage() {
             <Select label="Rent type" value={form.rentType} onChange={set('rentType')} options={RENT_TYPES} />
             <Input label="Occupants" type="number" min="1" value={form.occupantCount} onChange={set('occupantCount')} />
           </div>
-          <Input label="Move-in date" type="date" value={form.moveInDate} onChange={set('moveInDate')} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Security deposit / Advance (₹)" type="number" min="0" value={form.securityDeposit} onChange={set('securityDeposit')} placeholder="0" />
+            <Input label="Move-in date" type="date" value={form.moveInDate} onChange={set('moveInDate')} />
+          </div>
 
           {form.rentType === 'lease' && (
             <>
@@ -131,7 +134,6 @@ export default function AddTenantPage() {
                 <Input label="Lease start" type="date" value={form.leaseStart} onChange={set('leaseStart')} error={errors.leaseStart} />
                 <Input label="Lease end" type="date" value={form.leaseEnd} onChange={set('leaseEnd')} error={errors.leaseEnd} />
               </div>
-              <Input label="Security deposit (₹)" type="number" min="0" value={form.securityDeposit} onChange={set('securityDeposit')} />
             </>
           )}
 

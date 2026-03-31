@@ -43,7 +43,7 @@ export default function EditTenantPage() {
         status: t.status || 'active',
         leaseStart: t.leaseDetails?.startDate ? t.leaseDetails.startDate.slice(0, 10) : '',
         leaseEnd: t.leaseDetails?.endDate ? t.leaseDetails.endDate.slice(0, 10) : '',
-        securityDeposit: t.leaseDetails?.securityDeposit || '',
+        securityDeposit: t.securityDeposit || '',
         moveInDate: t.moveInDate ? t.moveInDate.slice(0, 10) : '',
         moveOutDate: t.moveOutDate ? t.moveOutDate.slice(0, 10) : '',
       });
@@ -80,6 +80,7 @@ export default function EditTenantPage() {
         unit: form.unit,
         monthlyRent: Number(form.monthlyRent),
         rentType: form.rentType,
+        securityDeposit: Number(form.securityDeposit) || 0,
         occupantCount: Number(form.occupantCount) || 1,
         status: form.status,
         moveInDate: form.moveInDate || undefined,
@@ -89,7 +90,6 @@ export default function EditTenantPage() {
         payload.leaseDetails = {
           startDate: form.leaseStart,
           endDate: form.leaseEnd,
-          ...(form.securityDeposit && { securityDeposit: Number(form.securityDeposit) }),
         };
       }
       await dispatch(updateTenant({ id, data: payload })).unwrap();
@@ -133,7 +133,8 @@ export default function EditTenantPage() {
             <Select label="Status" value={form.status} onChange={set('status')} options={TENANT_STATUS} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <Input label="Security deposit / Advance (₹)" type="number" min="0" value={form.securityDeposit} onChange={set('securityDeposit')} placeholder="0" />
             <Input label="Move-in date" type="date" value={form.moveInDate} onChange={set('moveInDate')} />
             <Input label="Move-out date" type="date" value={form.moveOutDate} onChange={set('moveOutDate')} />
           </div>
@@ -142,10 +143,9 @@ export default function EditTenantPage() {
             <>
               <hr className="border-slate-200" />
               <p className="text-sm font-medium text-slate-700">Lease Details</p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <Input label="Lease start" type="date" value={form.leaseStart} onChange={set('leaseStart')} error={errors.leaseStart} />
                 <Input label="Lease end" type="date" value={form.leaseEnd} onChange={set('leaseEnd')} error={errors.leaseEnd} />
-                <Input label="Security deposit (₹)" type="number" min="0" value={form.securityDeposit} onChange={set('securityDeposit')} />
               </div>
             </>
           )}

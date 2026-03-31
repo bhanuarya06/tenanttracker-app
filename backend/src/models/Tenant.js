@@ -34,6 +34,7 @@ const tenantSchema = new mongoose.Schema(
       required: [true, 'Monthly rent is required'],
       min: 0,
     },
+    securityDeposit: { type: Number, default: 0, min: 0 },
     // lease details — only required when rentType is 'lease'
     leaseDetails: {
       startDate: Date,

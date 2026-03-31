@@ -152,6 +152,7 @@ const tenantCreate = Joi.object({
   unit: Joi.string().trim().required(),
   rentType: Joi.string().valid('monthly', 'lease').required(),
   monthlyRent: Joi.number().min(0).required(),
+  securityDeposit: Joi.number().min(0).default(0),
   leaseDetails: Joi.when('rentType', {
     is: 'lease',
     then: Joi.object({
@@ -187,6 +188,7 @@ const tenantUpdate = Joi.object({
   unit: Joi.string().trim(),
   rentType: Joi.string().valid('monthly', 'lease'),
   monthlyRent: Joi.number().min(0),
+  securityDeposit: Joi.number().min(0),
   leaseDetails: Joi.object({
     startDate: Joi.date().iso(),
     endDate: Joi.date().iso(),
@@ -277,10 +279,10 @@ const billUpdate = Joi.object({
   }),
   previousBalance: Joi.number(),
   dueDate: Joi.date().iso(),
-  status: Joi.string().valid('draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled'),
+  status: Joi.string().valid('draft', 'issued', 'partial', 'overdue', 'cancelled'),
   notes: Joi.string().max(500).allow(''),
   paidAmount: Joi.number().min(0),
-  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'),
+  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'),
 });
 
 // --- Payment ---
@@ -288,7 +290,7 @@ const paymentCreate = Joi.object({
   bill: objectId.required(),
   amount: Joi.number().min(0.01).required(),
   paymentDate: Joi.date().iso().default(() => new Date()),
-  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'credit_card', 'debit_card', 'online', 'razorpay', 'other').required(),
+  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'other').required(),
   transactionId: Joi.string().allow(''),
   razorpayOrderId: Joi.string().allow(''),
   razorpayPaymentId: Joi.string().allow(''),

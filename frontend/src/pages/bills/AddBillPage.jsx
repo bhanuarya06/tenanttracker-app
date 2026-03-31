@@ -35,6 +35,15 @@ export default function AddBillPage() {
     tenantService.getAll({ limit: 100, status: 'active' }).then((d) => setTenants(d.tenants || []));
   }, []);
 
+  // Auto-set due date to 5th of the selected month/year
+  useEffect(() => {
+    const y = Number(form.year);
+    const m = Number(form.month);
+    if (y >= 2000 && m >= 1 && m <= 12) {
+      setForm((prev) => ({ ...prev, dueDate: `${y}-${String(m).padStart(2, '0')}-05` }));
+    }
+  }, [form.month, form.year]);
+
   // Auto-fill rent when tenant selected
   useEffect(() => {
     if (form.tenant) {
@@ -63,6 +72,18 @@ export default function AddBillPage() {
     return Object.keys(e).length === 0;
   };
 
+  const buildChargesPayload = (flat) => {
+    const UTILITY_KEYS = ['water', 'electricity', 'gas', 'internet', 'trash'];
+    const payload = { rent: Number(flat.rent) || 0 };
+    const utilities = {};
+    UTILITY_KEYS.forEach((k) => { if (flat[k]) utilities[k] = Number(flat[k]); });
+    if (Object.keys(utilities).length > 0) payload.utilities = utilities;
+    ['maintenance', 'parking', 'petFee', 'lateFee'].forEach((k) => {
+      if (flat[k]) payload[k] = Number(flat[k]);
+    });
+    return payload;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -71,7 +92,7 @@ export default function AddBillPage() {
       await dispatch(createBill({
         tenant: form.tenant,
         billingPeriod: { month: Number(form.month), year: Number(form.year) },
-        charges,
+        charges: buildChargesPayload(charges),
         previousBalance: Number(form.previousBalance) || 0,
         dueDate: form.dueDate,
         notes: form.notes,
@@ -114,7 +135,7 @@ export default function AddBillPage() {
           {errors.charges && <p className="text-sm text-rose-600">{errors.charges}</p>}
 
           <div className="grid grid-cols-2 gap-3">
-            {CHARGE_TYPES.map(({ key, label }) => (
+            {CHARGE_TYPES.filter((c) => c.key !== 'additionalCharges').map(({ key, label }) => (
               <Input
                 key={key} label={label} type="number" min="0" placeholder="0"
                 value={charges[key] || ''}
