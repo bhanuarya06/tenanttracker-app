@@ -56,6 +56,8 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         tokenManager.clearToken();
         localStorage.removeItem('user');
+        // Notify the app to redirect to login with a friendly message
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

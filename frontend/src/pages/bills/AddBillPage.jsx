@@ -10,6 +10,7 @@ import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
 import { CHARGE_TYPES, MONTHS } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function AddBillPage() {
   const navigate = useNavigate();
@@ -100,7 +101,7 @@ export default function AddBillPage() {
       toast.success('Bill created');
       navigate('/bills');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create bill');
+      toast.error(getErrorMessage(err, 'Failed to create bill'));
     } finally {
       setLoading(false);
     }

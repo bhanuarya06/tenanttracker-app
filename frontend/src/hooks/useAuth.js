@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { setUser, setLoading, logout as logoutAction } from '../store/slices/authSlice';
 import authService from '../services/authService';
 import tokenManager from '../services/tokenManager';
+import { getErrorMessage } from '../utils/errorMessages';
 import toast from 'react-hot-toast';
 
 export default function useAuth() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user, isAuthenticated, loading } = useSelector((s) => s.auth);
   const initRef = useRef(false);
 
@@ -27,6 +30,17 @@ export default function useAuth() {
     init();
   }, [dispatch]);
 
+  // Handle session expiry triggered by apiClient when token refresh fails
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      dispatch(logoutAction());
+      toast.error('Your session has expired. Please sign in again.');
+      navigate('/login', { replace: true });
+    };
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, [dispatch, navigate]);
+
   const login = useCallback(async (credentials) => {
     dispatch(setLoading(true));
     try {
@@ -35,8 +49,7 @@ export default function useAuth() {
       toast.success('Welcome back!');
       return data;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed';
-      toast.error(msg);
+      toast.error(getErrorMessage(err, 'Invalid email or password. Please try again.'));
       throw err;
     } finally {
       dispatch(setLoading(false));
@@ -51,8 +64,7 @@ export default function useAuth() {
       toast.success('Account created!');
       return data;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registration failed';
-      toast.error(msg);
+      toast.error(getErrorMessage(err, 'Registration failed. Please try again.'));
       throw err;
     } finally {
       dispatch(setLoading(false));
@@ -69,10 +81,15 @@ export default function useAuth() {
   }, [dispatch]);
 
   const updateProfile = useCallback(async (data) => {
-    const result = await authService.updateProfile(data);
-    dispatch(setUser(result.user));
-    toast.success('Profile updated');
-    return result;
+    try {
+      const result = await authService.updateProfile(data);
+      dispatch(setUser(result.user));
+      toast.success('Profile updated');
+      return result;
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update profile. Please try again.'));
+      throw err;
+    }
   }, [dispatch]);
 
   return { user, isAuthenticated, loading, login, register, logout, updateProfile };

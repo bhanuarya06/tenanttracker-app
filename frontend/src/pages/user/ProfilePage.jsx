@@ -7,6 +7,7 @@ import Select from '../../components/ui/Select';
 import Button from '../../components/ui/Button';
 import ImageUpload from '../../components/ui/ImageUpload';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 const GENDER_OPTIONS = [
   { value: '', label: 'Select gender' },
@@ -70,7 +71,7 @@ export default function ProfilePage() {
       toast.success('Password changed successfully');
       setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to change password');
+      toast.error(getErrorMessage(err, 'Failed to change password. Please try again.'));
     } finally {
       setPwLoading(false);
     }

@@ -13,6 +13,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { TENANT_STATUS } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function TenantProfilePage() {
   const { id } = useParams();
@@ -36,7 +37,7 @@ export default function TenantProfilePage() {
       toast.success('Tenant removed');
       navigate('/tenants');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to remove tenant');
+      toast.error(getErrorMessage(err, 'Failed to remove tenant'));
     } finally { setDeleting(false); setShowDelete(false); }
   };
 

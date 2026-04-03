@@ -4,6 +4,7 @@ import { Home, ArrowLeft } from 'lucide-react';
 import authService from '../../services/authService';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import { getErrorMessage } from '../../utils/errorMessages';
 import toast from 'react-hot-toast';
 
 export default function ForgotPasswordPage() {
@@ -20,7 +21,7 @@ export default function ForgotPasswordPage() {
       setSent(true);
       toast.success('Reset link sent to your email');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong');
+      toast.error(getErrorMessage(err, 'Failed to send reset link. Please try again.'));
     } finally {
       setLoading(false);
     }

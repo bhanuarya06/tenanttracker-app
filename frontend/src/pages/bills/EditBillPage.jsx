@@ -9,6 +9,7 @@ import Card from '../../components/ui/Card';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { BILL_STATUS, CHARGE_TYPES, MONTHS } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function EditBillPage() {
   const { id } = useParams();
@@ -95,7 +96,7 @@ export default function EditBillPage() {
       toast.success('Bill updated');
       navigate(`/bills/${id}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update bill');
+      toast.error(getErrorMessage(err, 'Failed to update bill'));
     } finally {
       setSaving(false);
     }

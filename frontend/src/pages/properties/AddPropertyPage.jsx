@@ -10,6 +10,7 @@ import Card from '../../components/ui/Card';
 import MultiImageUpload from '../../components/ui/MultiImageUpload';
 import { PROPERTY_TYPES } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function AddPropertyPage() {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export default function AddPropertyPage() {
       toast.success('Property created');
       navigate('/properties');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create property');
+      toast.error(getErrorMessage(err, 'Failed to create property'));
     } finally {
       setLoading(false);
     }

@@ -12,6 +12,7 @@ import Card from '../../components/ui/Card';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { RENT_TYPES, TENANT_STATUS } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function EditTenantPage() {
   const { id } = useParams();
@@ -97,7 +98,7 @@ export default function EditTenantPage() {
       toast.success('Tenant updated');
       navigate(`/tenants/${id}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update tenant');
+      toast.error(getErrorMessage(err, 'Failed to update tenant'));
     } finally {
       setSaving(false);
     }

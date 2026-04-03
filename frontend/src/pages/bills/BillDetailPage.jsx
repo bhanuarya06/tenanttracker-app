@@ -13,6 +13,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { BILL_STATUS, MONTHS, ROLES } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function BillDetailPage() {
   const { id } = useParams();
@@ -43,7 +44,7 @@ export default function BillDetailPage() {
       setBill(data.bill);
       toast.success('Bill sent to tenant');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send');
+      toast.error(getErrorMessage(err, 'Failed to send'));
     } finally { setSending(false); }
   };
 
@@ -53,7 +54,7 @@ export default function BillDetailPage() {
       setBill(result.bill);
       toast.success(`Bill marked as ${label}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update status');
+      toast.error(getErrorMessage(err, 'Failed to update status'));
     }
   };
 
@@ -64,7 +65,7 @@ export default function BillDetailPage() {
       toast.success('Bill deleted');
       navigate('/bills');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete');
+      toast.error(getErrorMessage(err, 'Failed to delete'));
     } finally { setDeleting(false); setShowDelete(false); }
   };
 
@@ -98,7 +99,7 @@ export default function BillDetailPage() {
   //     const rzp = new window.Razorpay(options);
   //     rzp.open();
   //   } catch (err) {
-  //     toast.error(err.response?.data?.message || 'Failed to initiate payment');
+  //     toast.error(getErrorMessage(err, 'Failed to initiate payment'));
   //   } finally { setPaying(false); }
   // };
 

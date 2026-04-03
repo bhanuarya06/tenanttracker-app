@@ -11,6 +11,7 @@ import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
 import { RENT_TYPES } from '../../config/constants';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function AddTenantPage() {
   const navigate = useNavigate();
@@ -82,7 +83,7 @@ export default function AddTenantPage() {
       toast.success('Tenant added');
       navigate('/tenants');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to add tenant');
+      toast.error(getErrorMessage(err, 'Failed to add tenant'));
     } finally {
       setLoading(false);
     }
