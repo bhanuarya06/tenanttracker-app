@@ -175,7 +175,13 @@ exports.sendBill = async (req, res) => {
 };
 
 exports.getBillsSummary = async (req, res) => {
-  const revenueSummary = await Bill.getRevenueSummary(req.user.userId);
+  const [revenueSummary, recentBills] = await Promise.all([
+    Bill.getRevenueSummary(req.user.userId),
+    Bill.find({ owner: req.user.userId })
+      .populate({ path: 'tenant', populate: { path: 'user', select: 'firstName lastName' } })
+      .sort('-createdAt')
+      .limit(5),
+  ]);
 
   const summary = {
     total: 0, paid: 0, outstanding: 0, overdue: 0,
@@ -193,12 +199,6 @@ exports.getBillsSummary = async (req, res) => {
       summary.outstandingAmount += item.totalAmount - item.paidAmount;
     }
   });
-
-  // Recent bills
-  const recentBills = await Bill.find({ owner: req.user.userId })
-    .populate({ path: 'tenant', populate: { path: 'user', select: 'firstName lastName' } })
-    .sort('-createdAt')
-    .limit(5);
 
   return sendSuccess(res, 'Summary fetched', { summary, recentBills });
 };

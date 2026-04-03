@@ -9,6 +9,7 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
 import { CHARGE_TYPES, MONTHS } from '../../config/constants';
+import { buildChargesPayload } from '../../utils/chargeTransformers';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../utils/errorMessages';
 
@@ -71,18 +72,6 @@ export default function AddBillPage() {
     if (Object.keys(charges).length === 0) e.charges = 'Add at least one charge';
     setErrors(e);
     return Object.keys(e).length === 0;
-  };
-
-  const buildChargesPayload = (flat) => {
-    const UTILITY_KEYS = ['water', 'electricity', 'gas', 'internet', 'trash'];
-    const payload = { rent: Number(flat.rent) || 0 };
-    const utilities = {};
-    UTILITY_KEYS.forEach((k) => { if (flat[k]) utilities[k] = Number(flat[k]); });
-    if (Object.keys(utilities).length > 0) payload.utilities = utilities;
-    ['maintenance', 'parking', 'petFee', 'lateFee'].forEach((k) => {
-      if (flat[k]) payload[k] = Number(flat[k]);
-    });
-    return payload;
   };
 
   const handleSubmit = async (e) => {

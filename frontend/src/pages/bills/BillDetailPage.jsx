@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Send, Trash2, CreditCard, Edit3, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { BILL_STATUS, MONTHS, ROLES } from '../../config/constants';
+import { flattenChargesToLines } from '../../utils/chargeTransformers';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../utils/errorMessages';
 
@@ -29,6 +30,8 @@ export default function BillDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [sending, setSending] = useState(false);
   // const [paying, setPaying] = useState(false); // TODO: tenant online payment not yet implemented
+
+  const chargeLines = useMemo(() => flattenChargesToLines(bill?.charges), [bill?.charges]);
 
   useEffect(() => {
     billService.getById(id).then((data) => {
@@ -110,19 +113,6 @@ export default function BillDetailPage() {
   const statusInfo = BILL_STATUS.find((s) => s.value === bill.status);
   const remaining = (bill.totalAmount || 0) - (bill.paidAmount || 0);
 
-  const flattenCharges = (charges) => {
-    if (!charges) return [];
-    const lines = [];
-    if (charges.rent > 0) lines.push({ label: 'Rent', value: charges.rent });
-    const UTILITY_LABELS = { water: 'Water', electricity: 'Electricity', gas: 'Gas', internet: 'Internet', trash: 'Trash' };
-    const u = charges.utilities || {};
-    Object.entries(UTILITY_LABELS).forEach(([k, label]) => { if (u[k] > 0) lines.push({ label, value: u[k] }); });
-    const DIRECT_LABELS = { maintenance: 'Maintenance', parking: 'Parking', petFee: 'Pet Fee', lateFee: 'Late Fee' };
-    Object.entries(DIRECT_LABELS).forEach(([k, label]) => { if (charges[k] > 0) lines.push({ label, value: charges[k] }); });
-    (charges.additionalCharges || []).forEach((a) => { if (a.amount > 0) lines.push({ label: a.description, value: a.amount }); });
-    return lines;
-  };
-
   return (
     <div className="max-w-3xl space-y-6">
       <BackButton to="/bills" label="Bills" />
@@ -191,7 +181,7 @@ export default function BillDetailPage() {
       <Card>
         <Card.Title>Charges Breakdown</Card.Title>
         <div className="mt-4 space-y-2">
-          {flattenCharges(bill.charges).map(({ label, value }, i) => (
+          {chargeLines.map(({ label, value }, i) => (
             <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
               <span className="text-sm text-slate-600">{label}</span>
               <span className="text-sm font-medium text-slate-900">₹{value.toLocaleString()}</span>

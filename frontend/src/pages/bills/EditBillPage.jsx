@@ -8,6 +8,7 @@ import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { BILL_STATUS, CHARGE_TYPES, MONTHS } from '../../config/constants';
+import { buildChargesPayload, flattenChargesToForm } from '../../utils/chargeTransformers';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../utils/errorMessages';
 
@@ -28,20 +29,7 @@ export default function EditBillPage() {
       const b = data.bill;
       setBill(b);
 
-      // Flatten charges (handle nested utilities)
-      const flatCharges = {};
-      if (b.charges) {
-        if (b.charges.rent) flatCharges.rent = b.charges.rent;
-        if (b.charges.utilities) {
-          Object.entries(b.charges.utilities).forEach(([k, v]) => {
-            if (v > 0) flatCharges[k] = v;
-          });
-        }
-        ['maintenance', 'parking', 'petFee', 'lateFee'].forEach((k) => {
-          if (b.charges[k] > 0) flatCharges[k] = b.charges[k];
-        });
-      }
-      setCharges(flatCharges);
+      setCharges(flattenChargesToForm(b.charges));
 
       setForm({
         dueDate: b.dueDate ? b.dueDate.slice(0, 10) : '',
@@ -76,18 +64,8 @@ export default function EditBillPage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      // Build charges in the backend's expected nested format
-      const utilityKeys = ['water', 'electricity', 'gas', 'internet', 'trash'];
-      const builtCharges = { rent: charges.rent || 0 };
-      const utilities = {};
-      utilityKeys.forEach((k) => { if (charges[k]) utilities[k] = charges[k]; });
-      if (Object.keys(utilities).length > 0) builtCharges.utilities = utilities;
-      ['maintenance', 'parking', 'petFee', 'lateFee'].forEach((k) => {
-        if (charges[k]) builtCharges[k] = charges[k];
-      });
-
       await billService.update(id, {
-        charges: builtCharges,
+        charges: buildChargesPayload(charges),
         previousBalance: Number(form.previousBalance) || 0,
         dueDate: form.dueDate,
         notes: form.notes,
