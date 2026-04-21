@@ -13,7 +13,7 @@ env:
 jobs:
   build-and-push:
     name: Build & Push Images
-    runs-on: ubuntu-latest
+    runs-on: ec2-user-latest
     permissions:
       contents: read
       packages: write
@@ -57,7 +57,7 @@ jobs:
 
   deploy:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: ec2-user-latest
     needs: build-and-push
     environment: production
     steps:
@@ -70,7 +70,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: GHCR_PAT,GITHUB_ACTOR,BACKEND_IMAGE,WEB_IMAGE
           script: |
-            cd /home/ubuntu/tenanttracker-app
+            cd /home/ec2-user/tenanttracker-app
 
             git pull
 
