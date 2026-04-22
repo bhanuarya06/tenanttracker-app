@@ -13,7 +13,7 @@ env:
 jobs:
   build-and-push:
     name: Build & Push Images
-    runs-on: ec2-user-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
