@@ -24,9 +24,16 @@ ENV VITE_API_BASE_URL=http://backend:5001
 EXPOSE 5173
 CMD ["npm", "run", "dev"]
 
-# production stage
+# production stage (EC2/docker-compose — SSL handled by the outer nginx container)
 FROM nginx:alpine AS production
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
+# ecs-production stage — SSL terminated by ALB; nginx proxies /api/* to localhost:5001
+FROM nginx:alpine AS ecs-production
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx-ecs.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,127 @@
+{
+  "family": "tenanttracker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::667802015944:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::667802015944:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "PLACEHOLDER_BACKEND",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5001,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV",      "value": "production" },
+        { "name": "PORT",          "value": "5001" },
+        { "name": "CORS_ORIGIN",   "value": "https://tenanttracker.online" },
+        { "name": "FRONTEND_URL",  "value": "https://tenanttracker.online" }
+      ],
+      "secrets": [
+        {
+          "name": "MONGODB_URI",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/MONGODB_URI"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/JWT_SECRET"
+        },
+        {
+          "name": "SMTP_HOST",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/SMTP_HOST"
+        },
+        {
+          "name": "SMTP_PORT",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/SMTP_PORT"
+        },
+        {
+          "name": "SMTP_USER",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/SMTP_USER"
+        },
+        {
+          "name": "SMTP_PASS",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/SMTP_PASS"
+        },
+        {
+          "name": "EMAIL_FROM",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/EMAIL_FROM"
+        },
+        {
+          "name": "RAZORPAY_KEY_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/RAZORPAY_KEY_ID"
+        },
+        {
+          "name": "RAZORPAY_KEY_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/RAZORPAY_KEY_SECRET"
+        },
+        {
+          "name": "GOOGLE_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/GOOGLE_CLIENT_ID"
+        },
+        {
+          "name": "GOOGLE_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/GOOGLE_CLIENT_SECRET"
+        },
+        {
+          "name": "GITHUB_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/GITHUB_CLIENT_ID"
+        },
+        {
+          "name": "GITHUB_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/GITHUB_CLIENT_SECRET"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/tenanttracker",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "backend",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:5001/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      }
+    },
+    {
+      "name": "frontend",
+      "image": "PLACEHOLDER_FRONTEND",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp"
+        }
+      ],
+      "dependsOn": [
+        {
+          "containerName": "backend",
+          "condition": "HEALTHY"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/tenanttracker",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "frontend",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}
