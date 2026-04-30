@@ -19,6 +19,10 @@ export default function useAuth() {
     initRef.current = true;
 
     const init = async () => {
+      if (!localStorage.getItem('user')) {
+        dispatch(setLoading(false));
+        return;
+      }
       try {
         const data = await authService.getProfile();
         dispatch(setUser(data.user));

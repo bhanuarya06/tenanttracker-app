@@ -54,10 +54,12 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        const wasAuthenticated = !!localStorage.getItem('user');
         tokenManager.clearToken();
         localStorage.removeItem('user');
-        // Notify the app to redirect to login with a friendly message
-        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        if (wasAuthenticated) {
+          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
