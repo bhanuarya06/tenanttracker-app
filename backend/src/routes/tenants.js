@@ -18,5 +18,8 @@ router.get('/:id', asyncHandler(ctrl.getTenantById));
 router.put('/:id', authorize('owner', 'admin'), validateBody(v.tenantUpdate), asyncHandler(ctrl.updateTenant));
 router.delete('/:id', authorize('owner', 'admin'), asyncHandler(ctrl.deleteTenant));
 router.post('/:id/notes', authorize('owner', 'admin'), asyncHandler(ctrl.addTenantNote));
+router.post('/:id/deposit/add', authorize('owner', 'admin'), asyncHandler(ctrl.addDeposit));
+router.post('/:id/deposit/deductions', authorize('owner', 'admin'), asyncHandler(ctrl.addDeduction));
+router.put('/:id/deposit/refund', authorize('owner', 'admin'), asyncHandler(ctrl.updateDepositRefund));
 
 module.exports = router;

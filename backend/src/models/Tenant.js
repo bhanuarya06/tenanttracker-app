@@ -35,6 +35,31 @@ const tenantSchema = new mongoose.Schema(
       min: 0,
     },
     securityDeposit: { type: Number, default: 0, min: 0 },
+    depositAdditions: [
+      {
+        amount: { type: Number, required: true, min: 0 },
+        date: { type: Date, required: true },
+        reason: { type: String, default: '', maxlength: 200 },
+        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    depositDeductions: [
+      {
+        category: { type: String, enum: ['Painting', 'Repairs', 'Cleaning', 'Damages', 'Other'], required: true },
+        description: { type: String, default: '', maxlength: 300 },
+        amount: { type: Number, required: true, min: 0 },
+        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    depositRefund: {
+      status: { type: String, enum: ['pending', 'partial', 'refunded'], default: 'pending' },
+      paidAmount: { type: Number, default: 0, min: 0 },
+      paidDate: Date,
+      paymentMode: { type: String, enum: ['cash', 'upi', 'bank_transfer', 'other'] },
+      notes: { type: String, default: '', maxlength: 500 },
+    },
     lateFeeEnabled: { type: Boolean, default: false },
     rentHistory: [
       {

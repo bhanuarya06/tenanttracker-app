@@ -223,6 +223,36 @@ exports.getExpiringLeases = async (req, res) => {
   return sendSuccess(res, 'Expiring leases fetched', { tenants, count: tenants.length });
 };
 
+exports.addDeposit = async (req, res) => {
+  const { amount, date, reason } = req.body;
+  const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
+  if (!tenant) return sendError(res, 'Tenant not found', 404);
+
+  tenant.depositAdditions.push({ amount: Number(amount), date: date || new Date(), reason: reason || '', addedBy: req.user.userId });
+  await tenant.save();
+  return sendSuccess(res, 'Deposit added', { depositAdditions: tenant.depositAdditions, totalDeposit: tenant.securityDeposit + tenant.depositAdditions.reduce((s, a) => s + a.amount, 0) });
+};
+
+exports.addDeduction = async (req, res) => {
+  const { category, description, amount } = req.body;
+  const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
+  if (!tenant) return sendError(res, 'Tenant not found', 404);
+
+  tenant.depositDeductions.push({ category, description: description || '', amount: Number(amount), addedBy: req.user.userId });
+  await tenant.save();
+  return sendSuccess(res, 'Deduction added', { depositDeductions: tenant.depositDeductions });
+};
+
+exports.updateDepositRefund = async (req, res) => {
+  const { status, paidAmount, paidDate, paymentMode, notes } = req.body;
+  const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
+  if (!tenant) return sendError(res, 'Tenant not found', 404);
+
+  tenant.depositRefund = { status, paidAmount: Number(paidAmount) || 0, paidDate: paidDate || undefined, paymentMode, notes: notes || '' };
+  await tenant.save();
+  return sendSuccess(res, 'Refund updated', { depositRefund: tenant.depositRefund });
+};
+
 exports.addTenantNote = async (req, res) => {
   const { content, isPrivate } = req.body;
   const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
