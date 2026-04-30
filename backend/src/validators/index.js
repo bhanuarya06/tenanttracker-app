@@ -77,6 +77,12 @@ const resetPassword = Joi.object({
 });
 
 // --- Property ---
+const roomSchema = Joi.object({ roomNumber: Joi.string().trim().required() });
+const floorSchema = Joi.object({
+  floorNumber: Joi.number().integer().min(1).required(),
+  rooms: Joi.array().items(roomSchema).min(1).required(),
+});
+
 const propertyCreate = Joi.object({
   name: Joi.string().trim().max(100).required(),
   description: Joi.string().max(1000).allow(''),
@@ -88,7 +94,8 @@ const propertyCreate = Joi.object({
     country: Joi.string().default('India'),
   }).required(),
   propertyType: Joi.string().valid('apartment', 'house', 'condo', 'studio', 'room', 'commercial', 'villa', 'pg').required(),
-  totalUnits: Joi.number().integer().min(1).required(),
+  floors: Joi.array().items(floorSchema).min(1).required(),
+  totalUnits: Joi.number().integer().min(1),
   availableUnits: Joi.number().integer().min(0),
   amenities: Joi.array().items(Joi.string().trim()),
   images: Joi.array().items(
@@ -107,6 +114,7 @@ const propertyUpdate = Joi.object({
     country: Joi.string(),
   }),
   propertyType: Joi.string().valid('apartment', 'house', 'condo', 'studio', 'room', 'commercial', 'villa', 'pg'),
+  floors: Joi.array().items(floorSchema).min(1),
   totalUnits: Joi.number().integer().min(1),
   availableUnits: Joi.number().integer().min(0),
   amenities: Joi.array().items(Joi.string().trim()),
@@ -141,7 +149,7 @@ const tenantCreate = Joi.object({
         firstName: Joi.string().trim().min(2).max(50).required(),
         lastName: Joi.string().trim().max(50).allow(''),
         email: Joi.string().email().required(),
-        password: Joi.string().min(8).max(128).required(),
+        password: Joi.string().min(8).max(128),
         phone: Joi.string().allow(''),
         dateOfBirth: Joi.date().iso().allow(null),
         gender: Joi.string().valid('male', 'female', 'other'),
@@ -181,6 +189,7 @@ const tenantCreate = Joi.object({
   }),
   status: Joi.string().valid('active', 'inactive', 'pending'),
   moveInDate: Joi.date().iso(),
+  lateFeeEnabled: Joi.boolean(),
   notes: Joi.string().max(500).allow(''),
 });
 
@@ -209,6 +218,7 @@ const tenantUpdate = Joi.object({
   status: Joi.string().valid('active', 'inactive', 'terminated', 'pending'),
   moveInDate: Joi.date().iso(),
   moveOutDate: Joi.date().iso(),
+  lateFeeEnabled: Joi.boolean(),
   // Allow updating user fields
   firstName: Joi.string().trim().min(2).max(50),
   lastName: Joi.string().trim().max(50).allow(''),

@@ -35,6 +35,7 @@ const tenantSchema = new mongoose.Schema(
       min: 0,
     },
     securityDeposit: { type: Number, default: 0, min: 0 },
+    lateFeeEnabled: { type: Boolean, default: false },
     // lease details — only required when rentType is 'lease'
     leaseDetails: {
       startDate: Date,

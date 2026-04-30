@@ -105,18 +105,32 @@ exports.getAvailableUnits = async (req, res) => {
   const property = await Property.findOne({ _id: req.params.id, owner: req.user.userId });
   if (!property) return sendError(res, 'Property not found', 404);
 
-  const occupiedUnits = await Tenant.find(
+  const occupiedTenants = await Tenant.find(
     { property: property._id, status: { $in: ['active', 'pending'] } },
     'unit'
   );
-  const occupied = occupiedUnits.map((t) => t.unit);
+  const occupied = new Set(occupiedTenants.map((t) => t.unit));
 
-  // Generate all possible units
-  const allUnits = [];
-  for (let i = 1; i <= property.totalUnits; i++) {
-    const unitName = `${i}`;
-    allUnits.push({ unit: unitName, isOccupied: occupied.includes(unitName) });
+  if (property.floors && property.floors.length > 0) {
+    const floors = property.floors.map((f) => ({
+      floorNumber: f.floorNumber,
+      rooms: f.rooms.map((r) => ({
+        roomNumber: r.roomNumber,
+        isOccupied: occupied.has(r.roomNumber),
+      })),
+    }));
+    const allRooms = floors.flatMap((f) => f.rooms);
+    return sendSuccess(res, 'Units fetched', {
+      floors,
+      units: allRooms.map((r) => ({ unit: r.roomNumber, isOccupied: r.isOccupied })),
+      available: allRooms.filter((r) => !r.isOccupied).length,
+    });
   }
 
+  // Fallback for properties without floor config
+  const allUnits = Array.from({ length: property.totalUnits }, (_, i) => {
+    const unit = `${i + 1}`;
+    return { unit, isOccupied: occupied.has(unit) };
+  });
   return sendSuccess(res, 'Units fetched', { units: allUnits, available: allUnits.filter((u) => !u.isOccupied).length });
 };
