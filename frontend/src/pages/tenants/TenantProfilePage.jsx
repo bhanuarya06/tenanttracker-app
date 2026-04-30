@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Edit3, Trash2, Receipt, CreditCard, Calendar, MapPin, Users as UsersIcon, Phone, Mail } from 'lucide-react';
+import { Edit3, Trash2, Receipt, Phone, Mail, TrendingUp } from 'lucide-react';
 import tenantService from '../../services/tenantService';
 import { deleteTenant } from '../../store/slices/tenantSlice';
 import { fetchProperties } from '../../store/slices/propertySlice';
@@ -136,6 +136,37 @@ export default function TenantProfilePage() {
             <div className="text-center p-3 bg-amber-50 rounded-lg">
               <p className="text-xl font-bold text-amber-700">₹{(tenant.financialSummary.balance || 0).toLocaleString()}</p>
               <p className="text-xs text-slate-500">Outstanding</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Rent History */}
+      {tenant.rentHistory?.length > 0 && (
+        <Card>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={16} className="text-slate-500" />
+            <Card.Title>Rent History</Card.Title>
+          </div>
+          <div className="relative">
+            <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-200" />
+            <div className="space-y-4">
+              {[...tenant.rentHistory].reverse().map((h, i) => (
+                <div key={i} className="flex items-start gap-4 pl-8 relative">
+                  <div className={`absolute left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-white ${i === 0 ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                  <div className="flex-1 bg-slate-50 rounded-xl px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-base font-bold ${i === 0 ? 'text-blue-700' : 'text-slate-700'}`}>
+                        ₹{h.amount.toLocaleString()}/mo
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {new Date(h.effectiveDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                    {h.reason && <p className="text-xs text-slate-500 mt-1">{h.reason}</p>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </Card>

@@ -36,6 +36,15 @@ const tenantSchema = new mongoose.Schema(
     },
     securityDeposit: { type: Number, default: 0, min: 0 },
     lateFeeEnabled: { type: Boolean, default: false },
+    rentHistory: [
+      {
+        amount: { type: Number, required: true },
+        effectiveDate: { type: Date, required: true },
+        reason: { type: String, default: '', maxlength: 200 },
+        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     // lease details — only required when rentType is 'lease'
     leaseDetails: {
       startDate: Date,

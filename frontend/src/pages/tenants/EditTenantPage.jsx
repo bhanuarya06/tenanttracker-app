@@ -11,6 +11,7 @@ import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { RENT_TYPES, TENANT_STATUS } from '../../config/constants';
+import { TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getErrorMessage } from '../../utils/errorMessages';
 
@@ -20,12 +21,15 @@ export default function EditTenantPage() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [originalRent, setOriginalRent] = useState(null);
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '',
     unit: '', monthlyRent: '', rentType: 'monthly',
     occupantCount: 1, status: 'active',
     leaseStart: '', leaseEnd: '', securityDeposit: '',
     moveInDate: '', moveOutDate: '',
+    lateFeeEnabled: false,
+    rentChangeReason: '', rentEffectiveDate: '',
   });
   const [errors, setErrors] = useState({});
 
@@ -33,6 +37,7 @@ export default function EditTenantPage() {
     tenantService.getById(id).then((data) => {
       const t = data.tenant;
       const user = t.user || {};
+      setOriginalRent(t.monthlyRent || 0);
       setForm({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
@@ -47,6 +52,8 @@ export default function EditTenantPage() {
         securityDeposit: t.securityDeposit || '',
         moveInDate: t.moveInDate ? t.moveInDate.slice(0, 10) : '',
         moveOutDate: t.moveOutDate ? t.moveOutDate.slice(0, 10) : '',
+        lateFeeEnabled: t.lateFeeEnabled || false,
+        rentChangeReason: '', rentEffectiveDate: '',
       });
     }).catch(() => toast.error('Failed to load tenant')).finally(() => setLoading(false));
   }, [id]);
@@ -74,6 +81,7 @@ export default function EditTenantPage() {
     if (!validate()) return;
     setSaving(true);
     try {
+      const rentChanged = Number(form.monthlyRent) !== originalRent;
       const payload = {
         firstName: form.firstName,
         lastName: form.lastName,
@@ -86,6 +94,11 @@ export default function EditTenantPage() {
         status: form.status,
         moveInDate: form.moveInDate || undefined,
         moveOutDate: form.moveOutDate || undefined,
+        lateFeeEnabled: form.lateFeeEnabled,
+        ...(rentChanged && {
+          rentChangeReason: form.rentChangeReason,
+          rentEffectiveDate: form.rentEffectiveDate || undefined,
+        }),
       };
       if (form.rentType === 'lease') {
         payload.leaseDetails = {
@@ -128,6 +141,21 @@ export default function EditTenantPage() {
             <Input label="Monthly rent (₹)" type="number" min="0" value={form.monthlyRent} onChange={set('monthlyRent')} error={errors.monthlyRent} />
           </div>
 
+          {originalRent !== null && Number(form.monthlyRent) !== originalRent && Number(form.monthlyRent) > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2 text-amber-800">
+                <TrendingUp size={15} />
+                <span className="text-sm font-medium">
+                  Rent changing from ₹{originalRent.toLocaleString()} → ₹{Number(form.monthlyRent).toLocaleString()}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Reason (optional)" value={form.rentChangeReason} onChange={set('rentChangeReason')} placeholder="Annual revision, market rate..." />
+                <Input label="Effective from" type="date" value={form.rentEffectiveDate} onChange={set('rentEffectiveDate')} />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-3 gap-4">
             <Select label="Rent type" value={form.rentType} onChange={set('rentType')} options={RENT_TYPES} />
             <Input label="Occupants" type="number" min="1" value={form.occupantCount} onChange={set('occupantCount')} />
@@ -150,6 +178,20 @@ export default function EditTenantPage() {
               </div>
             </>
           )}
+
+          <div className="flex items-center justify-between border border-slate-200 rounded-lg px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-slate-700">Late fee</p>
+              <p className="text-xs text-slate-500">Charge late fee when rent is overdue</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, lateFeeEnabled: !form.lateFeeEnabled })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.lateFeeEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.lateFeeEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={() => navigate(`/tenants/${id}`)}>Cancel</Button>

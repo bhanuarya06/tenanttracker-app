@@ -52,6 +52,7 @@ exports.createTenant = async (req, res) => {
     preferences,
     status: status || 'active',
     moveInDate,
+    rentHistory: [{ amount: monthlyRent, effectiveDate: moveInDate || new Date(), reason: 'Initial rent', changedBy: req.user.userId }],
     notes: notes ? [{ content: notes, createdBy: req.user.userId }] : [],
     createdBy: req.user.userId,
   });
@@ -132,8 +133,10 @@ exports.getTenantById = async (req, res) => {
 };
 
 exports.updateTenant = async (req, res) => {
-  const blocked = ['user', 'owner', 'property', 'createdBy'];
+  const blocked = ['user', 'owner', 'property', 'createdBy', 'rentHistory'];
   blocked.forEach((f) => delete req.body[f]);
+
+  const { rentChangeReason, rentEffectiveDate, ...rest } = req.body;
 
   const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
   if (!tenant) return sendError(res, 'Tenant not found', 404);
@@ -142,9 +145,9 @@ exports.updateTenant = async (req, res) => {
   const userFields = ['firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'bio'];
   const userUpdate = {};
   userFields.forEach((f) => {
-    if (req.body[f] !== undefined) {
-      userUpdate[f] = req.body[f];
-      delete req.body[f];
+    if (rest[f] !== undefined) {
+      userUpdate[f] = rest[f];
+      delete rest[f];
     }
   });
 
@@ -153,21 +156,31 @@ exports.updateTenant = async (req, res) => {
   }
 
   // Check unit availability if changing unit
-  if (req.body.unit && req.body.unit !== tenant.unit) {
+  if (rest.unit && rest.unit !== tenant.unit) {
     const existing = await Tenant.findOne({
       property: tenant.property,
-      unit: req.body.unit,
+      unit: rest.unit,
       status: { $in: ['active', 'pending'] },
       _id: { $ne: tenant._id },
     });
     if (existing) return sendError(res, 'Unit is already occupied', 409);
   }
 
+  // Record rent change in history
+  if (rest.monthlyRent !== undefined && Number(rest.monthlyRent) !== tenant.monthlyRent) {
+    tenant.rentHistory.push({
+      amount: Number(rest.monthlyRent),
+      effectiveDate: rentEffectiveDate || new Date(),
+      reason: rentChangeReason || '',
+      changedBy: req.user.userId,
+    });
+  }
+
   // Track status change for availableUnits adjustment
   const wasActive = ['active', 'pending'].includes(tenant.status);
-  const willBeActive = req.body.status ? ['active', 'pending'].includes(req.body.status) : wasActive;
+  const willBeActive = rest.status ? ['active', 'pending'].includes(rest.status) : wasActive;
 
-  Object.assign(tenant, req.body);
+  Object.assign(tenant, rest);
   tenant.updatedBy = req.user.userId;
   await tenant.save();
 

@@ -219,6 +219,8 @@ const tenantUpdate = Joi.object({
   moveInDate: Joi.date().iso(),
   moveOutDate: Joi.date().iso(),
   lateFeeEnabled: Joi.boolean(),
+  rentChangeReason: Joi.string().max(200).allow(''),
+  rentEffectiveDate: Joi.date().iso(),
   // Allow updating user fields
   firstName: Joi.string().trim().min(2).max(50),
   lastName: Joi.string().trim().max(50).allow(''),
