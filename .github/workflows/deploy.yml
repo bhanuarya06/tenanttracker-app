@@ -10,7 +10,7 @@ env:
   ECR_BACKEND_REPO: tenanttracker-backend    # ← ECR repo name for backend
   ECR_FRONTEND_REPO: tenanttracker-frontend  # ← ECR repo name for frontend
   ECS_CLUSTER: tenanttracker-cluster         # ← ECS cluster name
-  ECS_SERVICE: tenanttracker-service         # ← ECS service name
+  ECS_SERVICE: tenanttracker-service-ebphuijq
   TASK_DEFINITION_FILE: ecs/task-definition.json
   BACKEND_CONTAINER: backend
   FRONTEND_CONTAINER: frontend
