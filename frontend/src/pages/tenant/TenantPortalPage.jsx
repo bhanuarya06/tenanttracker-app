@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Building2, MapPin, Phone, Mail, Calendar, Shield, Receipt, CreditCard,
   Users, ChevronRight, CheckCircle, AlertTriangle, FileText, Banknote, Home,
+  TrendingUp, Wrench, Plus, ChevronDown, ChevronUp, Clock, CheckSquare,
+  AlertCircle,
 } from 'lucide-react';
 import tenantService from '../../services/tenantService';
+import maintenanceService from '../../services/maintenanceService';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -15,10 +19,7 @@ import { BILL_STATUS, MONTHS } from '../../config/constants';
 // ─── Lease Timeline ────────────────────────────────────────────────────────────
 
 function LeaseTimeline({ tenant }) {
-  if (tenant.rentType !== 'lease' || !tenant.leaseDetails?.startDate || !tenant.leaseDetails?.endDate) {
-    return null;
-  }
-
+  if (tenant.rentType !== 'lease' || !tenant.leaseDetails?.startDate || !tenant.leaseDetails?.endDate) return null;
   const start = new Date(tenant.leaseDetails.startDate);
   const end = new Date(tenant.leaseDetails.endDate);
   const now = new Date();
@@ -26,11 +27,7 @@ function LeaseTimeline({ tenant }) {
   const elapsed = Math.max(0, Math.min(now - start, total));
   const progress = Math.round((elapsed / total) * 100);
   const daysRemaining = Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
-
-  const barColor =
-    progress > 90 ? 'bg-rose-500' :
-    progress > 75 ? 'bg-amber-500' :
-    'bg-emerald-500';
+  const barColor = progress > 90 ? 'bg-rose-500' : progress > 75 ? 'bg-amber-500' : 'bg-emerald-500';
 
   return (
     <div className="space-y-3">
@@ -39,17 +36,10 @@ function LeaseTimeline({ tenant }) {
         <span>{end.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
       </div>
       <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-          style={{ width: `${Math.min(progress, 100)}%` }}
-          role="progressbar"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
+        <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${Math.min(progress, 100)}%` }} />
       </div>
       <div className="flex justify-between items-center">
-        <span className="text-xs text-slate-500">{progress}% of lease elapsed</span>
+        <span className="text-xs text-slate-500">{progress}% elapsed</span>
         <span className={`text-xs font-semibold ${progress > 90 ? 'text-rose-600' : progress > 75 ? 'text-amber-600' : 'text-emerald-600'}`}>
           {tenant.leaseStatus === 'active' && `${daysRemaining} days remaining`}
           {tenant.leaseStatus === 'expiring' && `${daysRemaining} days — Expiring soon!`}
@@ -58,6 +48,231 @@ function LeaseTimeline({ tenant }) {
         </span>
       </div>
     </div>
+  );
+}
+
+// ─── Rent History ─────────────────────────────────────────────────────────────
+
+function RentHistory({ history }) {
+  if (!history?.length) return null;
+  return (
+    <Card>
+      <Card.Header>
+        <Card.Title>Rent History</Card.Title>
+        <TrendingUp size={16} className="text-slate-400" />
+      </Card.Header>
+      <div className="relative pl-4">
+        <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-200" />
+        <div className="space-y-5">
+          {[...history].reverse().map((h, i) => (
+            <div key={i} className="relative pl-5">
+              <div className="absolute -left-[1px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary-500 border-2 border-white" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                <div>
+                  <p className="text-sm font-bold text-slate-900">₹{h.amount.toLocaleString()}/mo</p>
+                  {h.reason && <p className="text-xs text-slate-500">{h.reason}</p>}
+                </div>
+                <p className="text-xs text-slate-400">
+                  {new Date(h.effectiveDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Deposit Status ───────────────────────────────────────────────────────────
+
+function DepositStatus({ tenant }) {
+  const base = tenant.securityDeposit || 0;
+  const additions = (tenant.depositAdditions || []).reduce((s, a) => s + a.amount, 0);
+  const deductions = (tenant.depositDeductions || []).reduce((s, d) => s + d.amount, 0);
+  const totalHeld = base + additions;
+  const netRefund = totalHeld - deductions;
+  const refund = tenant.depositRefund || {};
+
+  const refundStatusColor = { pending: 'amber', partial: 'blue', refunded: 'emerald' };
+  const refundStatusLabel = { pending: 'Pending', partial: 'Partially Refunded', refunded: 'Fully Refunded' };
+
+  return (
+    <Card>
+      <Card.Header>
+        <Card.Title>Security Deposit</Card.Title>
+        <Shield size={16} className="text-slate-400" />
+      </Card.Header>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="bg-slate-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-slate-400 mb-1">Total Held</p>
+          <p className="font-bold text-slate-900 text-sm">₹{totalHeld.toLocaleString()}</p>
+        </div>
+        <div className="bg-rose-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-slate-400 mb-1">Deductions</p>
+          <p className="font-bold text-rose-600 text-sm">₹{deductions.toLocaleString()}</p>
+        </div>
+        <div className="bg-emerald-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-slate-400 mb-1">Net Refund</p>
+          <p className="font-bold text-emerald-700 text-sm">₹{netRefund.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {(tenant.depositDeductions || []).length > 0 && (
+        <div className="space-y-2 mb-3">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Deductions</p>
+          {tenant.depositDeductions.map((d, i) => (
+            <div key={i} className="flex justify-between text-sm py-1.5 border-b border-slate-100 last:border-0">
+              <span className="text-slate-600">{d.category}{d.description ? ` — ${d.description}` : ''}</span>
+              <span className="font-medium text-rose-600">−₹{d.amount.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {refund.status && (
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <span className="text-xs text-slate-500">Refund status</span>
+          <Badge color={refundStatusColor[refund.status] || 'amber'}>
+            {refundStatusLabel[refund.status] || refund.status}
+          </Badge>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Maintenance Request Form ─────────────────────────────────────────────────
+
+const CATEGORIES = ['Electrical', 'Plumbing', 'Carpentry', 'Painting', 'Cleaning', 'Other'];
+const STATUS_CONFIG = {
+  open: { color: 'rose', label: 'Open', icon: AlertCircle },
+  in_progress: { color: 'amber', label: 'In Progress', icon: Clock },
+  resolved: { color: 'emerald', label: 'Resolved', icon: CheckSquare },
+};
+
+function MaintenanceSection() {
+  const [requests, setRequests] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ category: 'Electrical', title: '', description: '', priority: 'medium' });
+
+  useEffect(() => {
+    maintenanceService.getAll({ limit: 10 }).then((d) => setRequests(d.requests || [])).catch(() => {});
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim() || !form.description.trim()) return;
+    setSubmitting(true);
+    try {
+      const { request } = await maintenanceService.create(form);
+      setRequests((prev) => [request, ...prev]);
+      setForm({ category: 'Electrical', title: '', description: '', priority: 'medium' });
+      setShowForm(false);
+      toast.success('Maintenance request submitted');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <Card.Header>
+        <Card.Title>Maintenance Requests</Card.Title>
+        <Button variant="outline" size="sm" onClick={() => setShowForm((v) => !v)}>
+          {showForm ? <ChevronUp size={15} /> : <Plus size={15} />}
+          {showForm ? 'Cancel' : 'New Request'}
+        </Button>
+      </Card.Header>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="space-y-4 mb-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Category</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">Priority</label>
+              <select
+                value={form.priority}
+                onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High — Urgent</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Short Title</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Water leakage in bathroom"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              maxLength={120}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Description</label>
+            <textarea
+              required
+              rows={3}
+              placeholder="Describe the issue in detail..."
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              maxLength={1000}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <Button type="submit" disabled={submitting} size="sm">
+            {submitting ? 'Submitting…' : 'Submit Request'}
+          </Button>
+        </form>
+      )}
+
+      {requests.length > 0 ? (
+        <div className="space-y-3">
+          {requests.map((r) => {
+            const conf = STATUS_CONFIG[r.status] || STATUS_CONFIG.open;
+            const StatusIcon = conf.icon;
+            return (
+              <div key={r._id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
+                <StatusIcon size={16} className={`mt-0.5 flex-shrink-0 ${r.status === 'resolved' ? 'text-emerald-500' : r.status === 'in_progress' ? 'text-amber-500' : 'text-rose-500'}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-slate-900 truncate">{r.title}</p>
+                    <Badge color={conf.color}>{conf.label}</Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{r.category} · {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  {r.resolutionNotes && (
+                    <p className="text-xs text-emerald-700 mt-1 bg-emerald-50 rounded px-2 py-1">{r.resolutionNotes}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <Wrench className="h-10 w-10 text-slate-200 mx-auto mb-2" />
+          <p className="text-sm text-slate-500">No maintenance requests yet</p>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -115,7 +330,6 @@ export default function TenantPortalPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">My Lease & Portal</h1>
         <p className="text-slate-500 mt-1">
@@ -125,32 +339,10 @@ export default function TenantPortalPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          icon={Banknote}
-          label="Monthly Rent"
-          value={`₹${(summary?.monthlyRent || 0).toLocaleString()}`}
-          color="primary"
-          subtext={tenant.rentType === 'lease' ? 'Lease' : 'Month-to-month'}
-        />
-        <StatsCard
-          icon={AlertTriangle}
-          label="Outstanding"
-          value={`₹${(summary?.outstanding || 0).toLocaleString()}`}
-          color={summary?.outstanding > 0 ? 'amber' : 'emerald'}
-          subtext={summary?.outstanding > 0 ? 'Due now' : 'All paid up'}
-        />
-        <StatsCard
-          icon={CreditCard}
-          label="Total Paid"
-          value={`₹${(summary?.totalPaid || 0).toLocaleString()}`}
-          color="emerald"
-        />
-        <StatsCard
-          icon={Shield}
-          label="Security Deposit"
-          value={`₹${(summary?.securityDeposit || 0).toLocaleString()}`}
-          color="violet"
-        />
+        <StatsCard icon={Banknote} label="Monthly Rent" value={`₹${(summary?.monthlyRent || 0).toLocaleString()}`} color="primary" subtext={tenant.rentType === 'lease' ? 'Lease' : 'Month-to-month'} />
+        <StatsCard icon={AlertTriangle} label="Outstanding" value={`₹${(summary?.outstanding || 0).toLocaleString()}`} color={summary?.outstanding > 0 ? 'amber' : 'emerald'} subtext={summary?.outstanding > 0 ? 'Due now' : 'All paid up'} />
+        <StatsCard icon={CreditCard} label="Total Paid" value={`₹${(summary?.totalPaid || 0).toLocaleString()}`} color="emerald" />
+        <StatsCard icon={Shield} label="Security Deposit" value={`₹${(summary?.securityDeposit || 0).toLocaleString()}`} color="violet" />
       </div>
 
       {/* Outstanding bill banner */}
@@ -169,9 +361,7 @@ export default function TenantPortalPage() {
             </div>
           </div>
           <Link to={`/bills/${currentBill._id}`} className="sm:flex-shrink-0">
-            <Button variant="warning" size="sm">
-              View Bill <ChevronRight size={16} />
-            </Button>
+            <Button variant="warning" size="sm">View Bill <ChevronRight size={16} /></Button>
           </Link>
         </div>
       )}
@@ -227,41 +417,30 @@ export default function TenantPortalPage() {
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <Calendar size={15} className="text-slate-400 flex-shrink-0" />
                     Moved in{' '}
-                    {new Date(tenant.moveInDate).toLocaleDateString('en-IN', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })}
+                    {new Date(tenant.moveInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Amenities */}
             {property?.amenities?.length > 0 && (
               <div className="mt-5 pt-5 border-t border-slate-100">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Amenities</p>
                 <div className="flex flex-wrap gap-2">
-                  {property.amenities.map((amenity) => (
-                    <span
-                      key={amenity}
-                      className="px-3 py-1 bg-slate-50 text-slate-600 text-xs rounded-full border border-slate-200 capitalize"
-                    >
-                      {amenity}
-                    </span>
+                  {property.amenities.map((a) => (
+                    <span key={a} className="px-3 py-1 bg-slate-50 text-slate-600 text-xs rounded-full border border-slate-200 capitalize">{a}</span>
                   ))}
                 </div>
               </div>
             )}
           </Card>
 
-          {/* Lease period (lease type only) */}
+          {/* Lease period */}
           {tenant.rentType === 'lease' && tenant.leaseDetails?.startDate && (
             <Card>
               <Card.Header>
                 <Card.Title>Lease Agreement</Card.Title>
                 {tenant.leaseDetails?.leaseType && (
-                  <span className="text-sm text-slate-500 capitalize">
-                    {tenant.leaseDetails.leaseType.replace('-', ' ')}
-                  </span>
+                  <span className="text-sm text-slate-500 capitalize">{tenant.leaseDetails.leaseType.replace('-', ' ')}</span>
                 )}
               </Card.Header>
               <LeaseTimeline tenant={tenant} />
@@ -269,17 +448,13 @@ export default function TenantPortalPage() {
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Start Date</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {new Date(tenant.leaseDetails.startDate).toLocaleDateString('en-IN', {
-                      day: 'numeric', month: 'short', year: 'numeric',
-                    })}
+                    {new Date(tenant.leaseDetails.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 mb-1">End Date</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {new Date(tenant.leaseDetails.endDate).toLocaleDateString('en-IN', {
-                      day: 'numeric', month: 'short', year: 'numeric',
-                    })}
+                    {new Date(tenant.leaseDetails.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
                 <div>
@@ -292,6 +467,12 @@ export default function TenantPortalPage() {
             </Card>
           )}
 
+          {/* Rent history */}
+          {tenant.rentHistory?.length > 0 && <RentHistory history={tenant.rentHistory} />}
+
+          {/* Maintenance requests */}
+          <MaintenanceSection />
+
           {/* Payment history */}
           <Card>
             <Card.Header>
@@ -303,28 +484,19 @@ export default function TenantPortalPage() {
             {recentPayments?.length > 0 ? (
               <div className="space-y-2">
                 {recentPayments.map((payment) => (
-                  <div
-                    key={payment._id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
-                  >
+                  <div key={payment._id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                         <CheckCircle size={16} className="text-emerald-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 capitalize">
-                          {payment.paymentMethod?.replace(/_/g, ' ')}
-                        </p>
+                        <p className="text-sm font-medium text-slate-900 capitalize">{payment.paymentMethod?.replace(/_/g, ' ')}</p>
                         <p className="text-xs text-slate-500">
-                          {new Date(payment.paymentDate).toLocaleDateString('en-IN', {
-                            day: 'numeric', month: 'short', year: 'numeric',
-                          })}
+                          {new Date(payment.paymentDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <p className="text-sm font-bold text-emerald-600">
-                      +₹{payment.amount?.toLocaleString()}
-                    </p>
+                    <p className="text-sm font-bold text-emerald-600">+₹{payment.amount?.toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -347,32 +519,23 @@ export default function TenantPortalPage() {
                 <div className="flex items-center gap-3">
                   <div className="h-11 w-11 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
                     <span className="text-primary-700 font-bold text-base">
-                      {(owner.firstName?.[0] || '').toUpperCase()}
-                      {(owner.lastName?.[0] || '').toUpperCase()}
+                      {(owner.firstName?.[0] || '').toUpperCase()}{(owner.lastName?.[0] || '').toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900">
-                      {owner.firstName} {owner.lastName}
-                    </p>
+                    <p className="font-semibold text-slate-900">{owner.firstName} {owner.lastName}</p>
                     <p className="text-xs text-slate-500">Property Owner</p>
                   </div>
                 </div>
                 <div className="space-y-2.5 pt-3 border-t border-slate-100">
                   {owner.email && (
-                    <a
-                      href={`mailto:${owner.email}`}
-                      className="flex items-center gap-2.5 text-sm text-slate-600 hover:text-primary-600 transition-colors"
-                    >
+                    <a href={`mailto:${owner.email}`} className="flex items-center gap-2.5 text-sm text-slate-600 hover:text-primary-600 transition-colors">
                       <Mail size={15} className="text-slate-400 flex-shrink-0" />
                       <span className="truncate">{owner.email}</span>
                     </a>
                   )}
                   {owner.phone && (
-                    <a
-                      href={`tel:${owner.phone}`}
-                      className="flex items-center gap-2.5 text-sm text-slate-600 hover:text-primary-600 transition-colors"
-                    >
+                    <a href={`tel:${owner.phone}`} className="flex items-center gap-2.5 text-sm text-slate-600 hover:text-primary-600 transition-colors">
                       <Phone size={15} className="text-slate-400 flex-shrink-0" />
                       {owner.phone}
                     </a>
@@ -382,7 +545,10 @@ export default function TenantPortalPage() {
             </Card>
           )}
 
-          {/* Bill summary */}
+          {/* Deposit status */}
+          <DepositStatus tenant={tenant} />
+
+          {/* Recent bills */}
           <Card>
             <Card.Header>
               <Card.Title>Recent Bills</Card.Title>
@@ -392,11 +558,8 @@ export default function TenantPortalPage() {
                 {recentBills.slice(0, 5).map((bill) => {
                   const statusInfo = BILL_STATUS.find((s) => s.value === bill.status);
                   return (
-                    <Link
-                      key={bill._id}
-                      to={`/bills/${bill._id}`}
-                      className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 transition"
-                    >
+                    <Link key={bill._id} to={`/bills/${bill._id}`}
+                          className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-slate-50 transition">
                       <div>
                         <p className="text-xs font-medium text-slate-800">
                           {MONTHS[(bill.billingPeriod?.month ?? 1) - 1]} {bill.billingPeriod?.year}
@@ -412,10 +575,7 @@ export default function TenantPortalPage() {
               <p className="text-xs text-slate-500 text-center py-4">No bills yet</p>
             )}
             <div className="mt-3 pt-3 border-t border-slate-100">
-              <Link
-                to="/bills"
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center justify-center gap-1"
-              >
+              <Link to="/bills" className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center justify-center gap-1">
                 View all bills <ChevronRight size={12} />
               </Link>
             </div>
@@ -431,11 +591,8 @@ export default function TenantPortalPage() {
                 { to: '/profile', icon: Users, label: 'My profile' },
                 { to: '/dashboard', icon: FileText, label: 'Dashboard' },
               ].map(({ to, icon: Icon, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition text-sm text-slate-700 group"
-                >
+                <Link key={to} to={to}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition text-sm text-slate-700 group">
                   <Icon size={17} className="text-slate-400 group-hover:text-primary-500 transition-colors" />
                   {label}
                 </Link>

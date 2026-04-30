@@ -2,6 +2,7 @@ const { Bill, Tenant, Payment } = require('../models');
 const { sendSuccess, sendError } = require('../utils/response');
 const { paginate, buildSort, escapeRegex } = require('../utils/query');
 const emailService = require('../services/emailService');
+const { generateBillsForMonth } = require('../services/billGenerationService');
 
 exports.createBill = async (req, res) => {
   const { tenant: tenantId, billingPeriod, charges, credits, previousBalance, dueDate, notes } = req.body;
@@ -207,38 +208,6 @@ exports.generateRecurringBills = async (req, res) => {
   const { month, year } = req.body;
   if (!month || !year) return sendError(res, 'Month and year required', 400);
 
-  const tenants = await Tenant.find({ owner: req.user.userId, status: 'active' });
-  const results = { created: 0, skipped: 0, errors: [] };
-
-  for (const tenant of tenants) {
-    try {
-      const existing = await Bill.findOne({
-        tenant: tenant._id,
-        'billingPeriod.month': month,
-        'billingPeriod.year': year,
-      });
-      if (existing) {
-        results.skipped++;
-        continue;
-      }
-
-      const dueDate = new Date(year, month - 1, 5); // 5th of the month
-      await Bill.create({
-        tenant: tenant._id,
-        property: tenant.property,
-        owner: req.user.userId,
-        billingPeriod: { month, year },
-        charges: { rent: tenant.monthlyRent },
-        previousBalance: tenant.balance || 0,
-        dueDate,
-        totalAmount: 0,
-        createdBy: req.user.userId,
-      });
-      results.created++;
-    } catch (err) {
-      results.errors.push({ tenant: tenant._id, error: err.message });
-    }
-  }
-
+  const results = await generateBillsForMonth(Number(month), Number(year), req.user.userId);
   return sendSuccess(res, `Generated ${results.created} bills, skipped ${results.skipped}`, { results });
 };
