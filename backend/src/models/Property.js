@@ -72,13 +72,17 @@ propertySchema.virtual('occupancyRate').get(function () {
 propertySchema.set('toJSON', { virtuals: true });
 propertySchema.set('toObject', { virtuals: true });
 
-propertySchema.pre('save', function (next) {
+propertySchema.pre('validate', function (next) {
   if (this.floors && this.floors.length > 0) {
     this.totalUnits = this.floors.reduce((sum, f) => sum + f.rooms.length, 0);
   }
   if (this.isNew && this.availableUnits == null) {
     this.availableUnits = this.totalUnits;
   }
+  next();
+});
+
+propertySchema.pre('save', function (next) {
   if (this.availableUnits > this.totalUnits) {
     return next(new Error('Available units cannot exceed total units'));
   }
