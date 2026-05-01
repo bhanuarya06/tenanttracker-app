@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Rounded square background matching sidebar primary-600 -->
+  <rect width="32" height="32" rx="7" fill="#4f46e5"/>
+  <!-- House body + roof (white filled) -->
+  <path d="M16 5L27 14H25V27H7V14H5L16 5Z" fill="white"/>
+  <!-- Door cutout (indigo, punched back through) -->
+  <rect x="13" y="19" width="6" height="8" rx="1" fill="#4f46e5"/>
+</svg>
