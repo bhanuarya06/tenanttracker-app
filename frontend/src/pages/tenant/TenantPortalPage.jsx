@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
 import {
   Building2, MapPin, Phone, Mail, Calendar, Shield, Receipt, CreditCard,
   Users, ChevronRight, CheckCircle, AlertTriangle, FileText, Banknote, Home,
-  TrendingUp, Wrench, Plus, ChevronDown, ChevronUp, Clock, CheckSquare,
-  AlertCircle,
+  TrendingUp, Wrench, ArrowRight,
 } from 'lucide-react';
 import tenantService from '../../services/tenantService';
-import maintenanceService from '../../services/maintenanceService';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -136,140 +133,6 @@ function DepositStatus({ tenant }) {
           <Badge color={refundStatusColor[refund.status] || 'amber'}>
             {refundStatusLabel[refund.status] || refund.status}
           </Badge>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-// ─── Maintenance Request Form ─────────────────────────────────────────────────
-
-const CATEGORIES = ['Electrical', 'Plumbing', 'Carpentry', 'Painting', 'Cleaning', 'Other'];
-const STATUS_CONFIG = {
-  open: { color: 'rose', label: 'Open', icon: AlertCircle },
-  in_progress: { color: 'amber', label: 'In Progress', icon: Clock },
-  resolved: { color: 'emerald', label: 'Resolved', icon: CheckSquare },
-};
-
-function MaintenanceSection() {
-  const [requests, setRequests] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ category: 'Electrical', title: '', description: '', priority: 'medium' });
-
-  useEffect(() => {
-    maintenanceService.getAll({ limit: 10 }).then((d) => setRequests(d.requests || [])).catch(() => {});
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.title.trim() || !form.description.trim()) return;
-    setSubmitting(true);
-    try {
-      const { request } = await maintenanceService.create(form);
-      setRequests((prev) => [request, ...prev]);
-      setForm({ category: 'Electrical', title: '', description: '', priority: 'medium' });
-      setShowForm(false);
-      toast.success('Maintenance request submitted');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit request');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Card>
-      <Card.Header>
-        <Card.Title>Maintenance Requests</Card.Title>
-        <Button variant="outline" size="sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? <ChevronUp size={15} /> : <Plus size={15} />}
-          {showForm ? 'Cancel' : 'New Request'}
-        </Button>
-      </Card.Header>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-4 mb-5 p-4 bg-slate-50 rounded-xl border border-slate-200">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">Category</label>
-              <select
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">Priority</label>
-              <select
-                value={form.priority}
-                onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High — Urgent</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">Short Title</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Water leakage in bathroom"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              maxLength={120}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">Description</label>
-            <textarea
-              required
-              rows={3}
-              placeholder="Describe the issue in detail..."
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              maxLength={1000}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-          <Button type="submit" disabled={submitting} size="sm">
-            {submitting ? 'Submitting…' : 'Submit Request'}
-          </Button>
-        </form>
-      )}
-
-      {requests.length > 0 ? (
-        <div className="space-y-3">
-          {requests.map((r) => {
-            const conf = STATUS_CONFIG[r.status] || STATUS_CONFIG.open;
-            const StatusIcon = conf.icon;
-            return (
-              <div key={r._id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
-                <StatusIcon size={16} className={`mt-0.5 flex-shrink-0 ${r.status === 'resolved' ? 'text-emerald-500' : r.status === 'in_progress' ? 'text-amber-500' : 'text-rose-500'}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-900 truncate">{r.title}</p>
-                    <Badge color={conf.color}>{conf.label}</Badge>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">{r.category} · {new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                  {r.resolutionNotes && (
-                    <p className="text-xs text-emerald-700 mt-1 bg-emerald-50 rounded px-2 py-1">{r.resolutionNotes}</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-8">
-          <Wrench className="h-10 w-10 text-slate-200 mx-auto mb-2" />
-          <p className="text-sm text-slate-500">No maintenance requests yet</p>
         </div>
       )}
     </Card>
@@ -470,8 +333,21 @@ export default function TenantPortalPage() {
           {/* Rent history */}
           {tenant.rentHistory?.length > 0 && <RentHistory history={tenant.rentHistory} />}
 
-          {/* Maintenance requests */}
-          <MaintenanceSection />
+          {/* Maintenance shortcut */}
+          <Link to="/maintenance" className="block">
+            <div className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between hover:shadow-md hover:border-primary-200 transition group">
+              <div className="flex items-center gap-4">
+                <div className="h-11 w-11 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0">
+                  <Wrench className="h-5 w-5 text-primary-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900">Maintenance Requests</p>
+                  <p className="text-sm text-slate-500 mt-0.5">Report an issue or check your request status</p>
+                </div>
+              </div>
+              <ArrowRight size={18} className="text-slate-400 group-hover:text-primary-500 transition-colors flex-shrink-0" />
+            </div>
+          </Link>
 
           {/* Payment history */}
           <Card>
