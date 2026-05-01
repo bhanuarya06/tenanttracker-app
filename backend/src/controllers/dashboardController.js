@@ -130,7 +130,7 @@ exports.getOwnerDashboard = async (req, res) => {
     const pid = t.property.toString();
     if (!propTenantMap[pid]) propTenantMap[pid] = { count: 0, expectedRent: 0 };
     propTenantMap[pid].count += 1;
-    propTenantMap[pid].expectedRent += t.monthlyRent;
+    propTenantMap[pid].expectedRent += (t.monthlyRent || 0);
   });
 
   const propertyBreakdown = properties.map((p) => {

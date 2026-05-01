@@ -98,7 +98,16 @@ function OwnerDashboard() {
   if (loading) return <PageLoader />;
   if (!data) return null;
 
-  const { overview, financial, revenueChart, propertyBreakdown, recentBills, recentPayments, expiringLeases, alerts } = data;
+  const {
+    overview = {},
+    financial = {},
+    revenueChart = [],
+    propertyBreakdown = [],
+    recentBills = [],
+    recentPayments = [],
+    expiringLeases = [],
+    alerts = {},
+  } = data;
 
   return (
     <div className="space-y-6">
@@ -147,7 +156,7 @@ function OwnerDashboard() {
         <StatsCard icon={Building2} label="Properties" value={overview.totalProperties} color="primary" subtext={`${overview.totalUnits} total units`} />
         <StatsCard icon={Users} label="Active Tenants" value={overview.activeTenants} color="blue" subtext={`of ${overview.totalTenants} total`} />
         <StatsCard icon={TrendingUp} label="Occupancy Rate" value={`${overview.occupancyRate}%`} color={overview.occupancyRate >= 80 ? 'emerald' : 'amber'} subtext={`${overview.availableUnits} vacant`} />
-        <StatsCard icon={Home} label="Vacancy Cost" value={`₹${financial.vacancyCost.toLocaleString()}`} color={financial.vacancyCost > 0 ? 'rose' : 'emerald'} subtext="Lost revenue/month" />
+        <StatsCard icon={Home} label="Vacancy Cost" value={`₹${(financial.vacancyCost || 0).toLocaleString()}`} color={(financial.vacancyCost || 0) > 0 ? 'rose' : 'emerald'} subtext="Lost revenue/month" />
       </div>
 
       {/* 12-month revenue chart */}
