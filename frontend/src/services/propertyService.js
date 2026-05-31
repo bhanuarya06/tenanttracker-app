@@ -26,6 +26,10 @@ const propertyService = {
     const res = await apiClient.get(`${API_URLS.PROPERTIES}/stats`);
     return res.data.data;
   },
+  async getAvailableUnits(id) {
+    const res = await apiClient.get(`${API_URLS.PROPERTIES}/${id}/units`);
+    return res.data.data;
+  },
 };
 
 export default propertyService;

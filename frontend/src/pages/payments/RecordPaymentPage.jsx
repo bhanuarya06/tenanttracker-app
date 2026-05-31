@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -117,7 +118,7 @@ export default function RecordPaymentPage() {
       toast.success('Payment recorded successfully!');
       navigate('/payments');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to record payment');
+      toast.error(getErrorMessage(err, 'Failed to record payment. Please try again.'));
     } finally {
       setSubmitting(false);
     }

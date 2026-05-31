@@ -5,6 +5,17 @@ import toast from 'react-hot-toast';
 import tokenManager from '../../services/tokenManager';
 import { setUser } from '../../store/slices/authSlice';
 import { handleOAuthCallback } from '../../services/oauthService';
+import { getErrorMessage } from '../../utils/errorMessages';
+
+const OAUTH_ERROR_MAP = {
+  access_denied: 'Access was denied. Please try signing in again.',
+  invalid_request: 'The authentication request was invalid. Please try again.',
+  unauthorized_client: 'This application is not authorized. Please contact support.',
+  unsupported_response_type: 'Authentication configuration error. Please contact support.',
+  invalid_scope: 'The requested permissions were not granted. Please try again.',
+  server_error: 'The authentication server encountered an error. Please try again.',
+  temporarily_unavailable: 'Authentication service is temporarily unavailable. Please try again shortly.',
+};
 
 export default function OAuthCallbackPage() {
   const { provider } = useParams();
@@ -23,9 +34,9 @@ export default function OAuthCallbackPage() {
     const providerError = searchParams.get('error');
 
     if (providerError) {
-      const desc = searchParams.get('error_description') || 'Authentication was denied';
-      setError(desc);
-      toast.error(desc);
+      const friendly = OAUTH_ERROR_MAP[providerError] || 'Authentication failed. Please try again.';
+      setError(friendly);
+      toast.error(friendly);
       setTimeout(() => navigate('/login', { replace: true }), 2000);
       return;
     }
@@ -48,7 +59,7 @@ export default function OAuthCallbackPage() {
           throw new Error(result.message || 'Authentication failed');
         }
       } catch (err) {
-        const msg = err.response?.data?.message || err.message || 'OAuth authentication failed';
+        const msg = getErrorMessage(err, 'Sign-in failed. Please try again.');
         setError(msg);
         toast.error(msg);
         setTimeout(() => navigate('/login', { replace: true }), 2500);

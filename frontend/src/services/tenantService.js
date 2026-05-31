@@ -30,6 +30,18 @@ const tenantService = {
     const res = await apiClient.post(`${API_URLS.TENANTS}/${id}/notes`, { content });
     return res.data.data;
   },
+  async addDeposit(id, data) {
+    const res = await apiClient.post(`${API_URLS.TENANTS}/${id}/deposit/add`, data);
+    return res.data.data;
+  },
+  async addDeduction(id, data) {
+    const res = await apiClient.post(`${API_URLS.TENANTS}/${id}/deposit/deductions`, data);
+    return res.data.data;
+  },
+  async updateDepositRefund(id, data) {
+    const res = await apiClient.put(`${API_URLS.TENANTS}/${id}/deposit/refund`, data);
+    return res.data.data;
+  },
 };
 
 export default tenantService;

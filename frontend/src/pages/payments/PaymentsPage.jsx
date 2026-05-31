@@ -94,7 +94,7 @@ export default function PaymentsPage() {
                       {p.bill && <p className="text-xs text-slate-500">Bill: {p.bill?.billingPeriod?.month}/{p.bill?.billingPeriod?.year}</p>}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600 capitalize">
-                      {PAYMENT_METHODS.find((m) => m.value === p.method)?.label || p.method}
+                      {PAYMENT_METHODS.find((m) => m.value === p.paymentMethod)?.label || p.paymentMethod}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">
                       {new Date(p.paymentDate || p.createdAt).toLocaleDateString()}

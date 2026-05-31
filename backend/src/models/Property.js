@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 
+const roomSchema = new mongoose.Schema({
+  roomNumber: { type: String, required: true, trim: true },
+}, { _id: true });
+
+const floorSchema = new mongoose.Schema({
+  floorNumber: { type: Number, required: true, min: 1 },
+  rooms: { type: [roomSchema], default: [] },
+}, { _id: true });
+
 const propertySchema = new mongoose.Schema(
   {
     name: {
@@ -26,7 +35,8 @@ const propertySchema = new mongoose.Schema(
       enum: ['apartment', 'house', 'condo', 'studio', 'room', 'commercial', 'villa', 'pg'],
       required: true,
     },
-    totalUnits: { type: Number, required: true, min: 1 },
+    floors: { type: [floorSchema], default: [] },
+    totalUnits: { type: Number, min: 1, default: 0 },
     availableUnits: { type: Number, min: 0 },
     amenities: [String],
     images: [
@@ -62,10 +72,17 @@ propertySchema.virtual('occupancyRate').get(function () {
 propertySchema.set('toJSON', { virtuals: true });
 propertySchema.set('toObject', { virtuals: true });
 
-propertySchema.pre('save', function (next) {
+propertySchema.pre('validate', function (next) {
+  if (this.floors && this.floors.length > 0) {
+    this.totalUnits = this.floors.reduce((sum, f) => sum + f.rooms.length, 0);
+  }
   if (this.isNew && this.availableUnits == null) {
     this.availableUnits = this.totalUnits;
   }
+  next();
+});
+
+propertySchema.pre('save', function (next) {
   if (this.availableUnits > this.totalUnits) {
     return next(new Error('Available units cannot exceed total units'));
   }

@@ -46,7 +46,7 @@ const billSchema = new mongoose.Schema(
     previousBalance: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ['draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled'],
+      enum: ['draft', 'issued', 'paid', 'partial', 'overdue', 'cancelled'],
       default: 'draft',
     },
     dueDate: { type: Date, required: true },
@@ -55,7 +55,7 @@ const billSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true, min: 0 },
     paymentMethod: {
       type: String,
-      enum: ['cash', 'check', 'bank_transfer', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'],
+      enum: ['cash', 'check', 'bank_transfer', 'upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'],
     },
     notes: { type: String, maxlength: 500 },
     attachments: [{ name: String, url: String, uploadedAt: { type: Date, default: Date.now } }],
@@ -101,7 +101,7 @@ billSchema.virtual('remainingBalance').get(function () {
 });
 
 billSchema.virtual('isOverdue').get(function () {
-  return this.dueDate < new Date() && ['sent', 'partial'].includes(this.status);
+  return this.dueDate < new Date() && ['issued', 'partial'].includes(this.status);
 });
 
 billSchema.virtual('billingPeriodString').get(function () {
@@ -141,7 +141,7 @@ billSchema.statics.findByOwner = function (ownerId, filters = {}) {
 billSchema.statics.findOverdue = function (ownerId) {
   return this.find({
     owner: ownerId,
-    status: { $in: ['sent', 'partial'] },
+    status: { $in: ['issued', 'partial'] },
     dueDate: { $lt: new Date() },
   })
     .populate({ path: 'tenant', populate: { path: 'user', select: 'firstName lastName' } })

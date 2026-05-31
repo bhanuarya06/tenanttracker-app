@@ -77,6 +77,12 @@ const resetPassword = Joi.object({
 });
 
 // --- Property ---
+const roomSchema = Joi.object({ roomNumber: Joi.string().trim().required() });
+const floorSchema = Joi.object({
+  floorNumber: Joi.number().integer().min(1).required(),
+  rooms: Joi.array().items(roomSchema).min(1).required(),
+});
+
 const propertyCreate = Joi.object({
   name: Joi.string().trim().max(100).required(),
   description: Joi.string().max(1000).allow(''),
@@ -88,7 +94,8 @@ const propertyCreate = Joi.object({
     country: Joi.string().default('India'),
   }).required(),
   propertyType: Joi.string().valid('apartment', 'house', 'condo', 'studio', 'room', 'commercial', 'villa', 'pg').required(),
-  totalUnits: Joi.number().integer().min(1).required(),
+  floors: Joi.array().items(floorSchema).min(1).required(),
+  totalUnits: Joi.number().integer().min(1),
   availableUnits: Joi.number().integer().min(0),
   amenities: Joi.array().items(Joi.string().trim()),
   images: Joi.array().items(
@@ -107,6 +114,7 @@ const propertyUpdate = Joi.object({
     country: Joi.string(),
   }),
   propertyType: Joi.string().valid('apartment', 'house', 'condo', 'studio', 'room', 'commercial', 'villa', 'pg'),
+  floors: Joi.array().items(floorSchema).min(1),
   totalUnits: Joi.number().integer().min(1),
   availableUnits: Joi.number().integer().min(0),
   amenities: Joi.array().items(Joi.string().trim()),
@@ -141,7 +149,7 @@ const tenantCreate = Joi.object({
         firstName: Joi.string().trim().min(2).max(50).required(),
         lastName: Joi.string().trim().max(50).allow(''),
         email: Joi.string().email().required(),
-        password: Joi.string().min(8).max(128).required(),
+        password: Joi.string().min(8).max(128),
         phone: Joi.string().allow(''),
         dateOfBirth: Joi.date().iso().allow(null),
         gender: Joi.string().valid('male', 'female', 'other'),
@@ -152,6 +160,7 @@ const tenantCreate = Joi.object({
   unit: Joi.string().trim().required(),
   rentType: Joi.string().valid('monthly', 'lease').required(),
   monthlyRent: Joi.number().min(0).required(),
+  securityDeposit: Joi.number().min(0).default(0),
   leaseDetails: Joi.when('rentType', {
     is: 'lease',
     then: Joi.object({
@@ -180,6 +189,7 @@ const tenantCreate = Joi.object({
   }),
   status: Joi.string().valid('active', 'inactive', 'pending'),
   moveInDate: Joi.date().iso(),
+  lateFeeEnabled: Joi.boolean(),
   notes: Joi.string().max(500).allow(''),
 });
 
@@ -187,6 +197,7 @@ const tenantUpdate = Joi.object({
   unit: Joi.string().trim(),
   rentType: Joi.string().valid('monthly', 'lease'),
   monthlyRent: Joi.number().min(0),
+  securityDeposit: Joi.number().min(0),
   leaseDetails: Joi.object({
     startDate: Joi.date().iso(),
     endDate: Joi.date().iso(),
@@ -207,6 +218,9 @@ const tenantUpdate = Joi.object({
   status: Joi.string().valid('active', 'inactive', 'terminated', 'pending'),
   moveInDate: Joi.date().iso(),
   moveOutDate: Joi.date().iso(),
+  lateFeeEnabled: Joi.boolean(),
+  rentChangeReason: Joi.string().max(200).allow(''),
+  rentEffectiveDate: Joi.date().iso(),
   // Allow updating user fields
   firstName: Joi.string().trim().min(2).max(50),
   lastName: Joi.string().trim().max(50).allow(''),
@@ -277,10 +291,10 @@ const billUpdate = Joi.object({
   }),
   previousBalance: Joi.number(),
   dueDate: Joi.date().iso(),
-  status: Joi.string().valid('draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled'),
+  status: Joi.string().valid('draft', 'issued', 'partial', 'overdue', 'cancelled'),
   notes: Joi.string().max(500).allow(''),
   paidAmount: Joi.number().min(0),
-  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'),
+  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'),
 });
 
 // --- Payment ---
@@ -288,7 +302,7 @@ const paymentCreate = Joi.object({
   bill: objectId.required(),
   amount: Joi.number().min(0.01).required(),
   paymentDate: Joi.date().iso().default(() => new Date()),
-  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'credit_card', 'debit_card', 'online', 'razorpay', 'other').required(),
+  paymentMethod: Joi.string().valid('cash', 'check', 'bank_transfer', 'upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'other').required(),
   transactionId: Joi.string().allow(''),
   razorpayOrderId: Joi.string().allow(''),
   razorpayPaymentId: Joi.string().allow(''),

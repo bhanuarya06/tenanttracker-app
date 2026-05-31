@@ -2,9 +2,11 @@ const app = require('./app');
 const config = require('./config/config');
 const connectDB = require('./config/database');
 const logger = require('./utils/logger');
+const { initBillCron } = require('./cron/billCron');
 
 const start = async () => {
   await connectDB();
+  initBillCron();
 
   const server = app.listen(config.port, () => {
     logger.info(`Server running on port ${config.port} [${config.nodeEnv}]`);

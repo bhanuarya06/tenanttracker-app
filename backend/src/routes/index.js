@@ -8,6 +8,7 @@ router.use('/api/bills', require('./bills'));
 router.use('/api/payments', require('./payments'));
 router.use('/api/dashboard', require('./dashboard'));
 router.use('/api/uploads', require('./uploads'));
+router.use('/api/maintenance', require('./maintenance'));
 
 // Health check
 router.get('/health', (req, res) => {

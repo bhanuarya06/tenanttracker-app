@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 import { fetchPropertyById, updateProperty } from '../../store/slices/propertySlice';
 import BackButton from '../../components/ui/BackButton';
 import Button from '../../components/ui/Button';
@@ -81,7 +82,7 @@ export default function EditPropertyPage() {
       toast.success('Property updated');
       navigate(`/properties/${id}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update property');
+      toast.error(getErrorMessage(err, 'Failed to update property'));
     } finally {
       setSaving(false);
     }

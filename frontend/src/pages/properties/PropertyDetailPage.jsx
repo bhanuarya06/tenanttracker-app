@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 function resolveUrl(url) {
@@ -44,7 +45,7 @@ export default function PropertyDetailPage() {
       toast.success('Property deleted');
       navigate('/properties');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to delete');
+      toast.error(getErrorMessage(err, 'Failed to delete'));
     } finally {
       setDeleting(false);
       setShowDelete(false);

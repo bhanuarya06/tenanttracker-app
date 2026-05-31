@@ -1,97 +1,98 @@
-name: Deploy
+name: Deploy to Amazon ECS
 
 on:
   push:
-    branches: [prod]
-  workflow_dispatch:
+    branches:
+      - stableVersion
 
 env:
-  REGISTRY:       ghcr.io
-  BACKEND_IMAGE:  ghcr.io/${{ github.repository }}/api
-  WEB_IMAGE:      ghcr.io/${{ github.repository }}/web
+  AWS_REGION: us-east-1
+  ECR_BACKEND_REPO: tenanttracker-backend    # ← ECR repo name for backend
+  ECR_FRONTEND_REPO: tenanttracker-frontend  # ← ECR repo name for frontend
+  ECS_CLUSTER: tenanttracker-cluster         # ← ECS cluster name
+  ECS_SERVICE: tenanttracker-service-ebphuijq
+  TASK_DEFINITION_FILE: ecs/task-definition.json
+  BACKEND_CONTAINER: backend
+  FRONTEND_CONTAINER: frontend
 
 jobs:
-  build-and-push:
-    name: Build & Push Images
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push backend
-        run: |
-          docker build \
-            -t ${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
-            -t ${{ env.BACKEND_IMAGE }}:latest \
-            ./backend
-
-      - name: Push backend image
-        run: |
-          docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          docker push ${{ env.BACKEND_IMAGE }}:latest
-
-      - name: Build web image
-        run: |
-          docker build \
-            -f frontend/Dockerfile \
-            -t ${{ env.WEB_IMAGE }}:${{ github.sha }} \
-            -t ${{ env.WEB_IMAGE }}:latest \
-            ./frontend
-      - name: Push web image
-        run: |
-          docker push ${{ env.WEB_IMAGE }}:${{ github.sha }}
-          docker push ${{ env.WEB_IMAGE }}:latest
-
   deploy:
-    name: Deploy to Production
+    name: Build and Deploy
     runs-on: ubuntu-latest
-    needs: build-and-push
     environment: production
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: GHCR_PAT,GITHUB_ACTOR,BACKEND_IMAGE,WEB_IMAGE
-          script: |
-            cd /home/ubuntu/tenanttracker-app
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-            git pull
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-            echo "$GHCR_PAT" | \
-              docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-
-            # Pin containers to the exact image SHA built above
-            export BACKEND_IMAGE="${BACKEND_IMAGE}:${{ github.sha }}"
-            export WEB_IMAGE="${WEB_IMAGE}:${{ github.sha }}"
-
-            docker compose pull
-            docker compose up -d --remove-orphans
-
-            echo "Running health check (waiting 15s for containers to stabilise)..."
-            sleep 15
-            if ! curl -fsS https://tenanttracker.online/health; then
-              echo "Health check failed — rolling back"
-              docker compose down
-              exit 1
-            fi
-
-            docker image prune -f
-            echo "Deployment complete!"
+      # ── Backend ──────────────────────────────────────────────────────────────
+      - name: Build, tag, and push backend image to ECR
+        id: build-backend
         env:
-          GHCR_PAT: ${{ secrets.GHCR_PAT }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}
-          WEB_IMAGE: ${{ env.WEB_IMAGE }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_BACKEND_REPO:latest \
+            ./backend
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:latest
+          echo "image=$ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # ── Frontend ─────────────────────────────────────────────────────────────
+      - name: Build, tag, and push frontend image to ECR
+        id: build-frontend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --target ecs-production \
+            --build-arg VITE_API_BASE_URL=/api \
+            --build-arg VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }} \
+            --build-arg VITE_RAZORPAY_KEY_ID=${{ secrets.VITE_RAZORPAY_KEY_ID }} \
+            --build-arg VITE_GITHUB_CLIENT_ID=${{ secrets.VITE_GITHUB_CLIENT_ID }} \
+            -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest \
+            ./frontend
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest
+          echo "image=$ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # ── Update task definition ───────────────────────────────────────────────
+      - name: Inject new backend image into task definition
+        id: render-backend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.TASK_DEFINITION_FILE }}
+          container-name: ${{ env.BACKEND_CONTAINER }}
+          image: ${{ steps.build-backend.outputs.image }}
+
+      - name: Inject new frontend image into task definition
+        id: render-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-backend.outputs.task-definition }}
+          container-name: ${{ env.FRONTEND_CONTAINER }}
+          image: ${{ steps.build-frontend.outputs.image }}
+
+      # ── Deploy ───────────────────────────────────────────────────────────────
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-frontend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true

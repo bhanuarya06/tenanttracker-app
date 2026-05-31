@@ -41,11 +41,15 @@ import BillDetailPage from './pages/bills/BillDetailPage';
 import PaymentsPage from './pages/payments/PaymentsPage';
 import RecordPaymentPage from './pages/payments/RecordPaymentPage';
 
+// Tenant
+import TenantPortalPage from './pages/tenant/TenantPortalPage';
+
+// Maintenance
+import MaintenancePage from './pages/maintenance/MaintenancePage';
+
 // User
 import ProfilePage from './pages/user/ProfilePage';
 import ContactPage from './pages/user/ContactPage';
-
-console.log('VITE_GOOGLE_CLIENT_ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
 function AuthInitializer({ children }) {
   useAuth();
@@ -58,7 +62,7 @@ export default function App() {
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 3000,
+          duration: 1000,
           style: { borderRadius: '10px', background: '#1e293b', color: '#fff', fontSize: '14px' },
         }}
       />
@@ -102,6 +106,12 @@ export default function App() {
           {/* Payments — all roles */}
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/payments/record" element={<ProtectedRoute roles={['owner', 'admin']}><RecordPaymentPage /></ProtectedRoute>} />
+
+          {/* Tenant portal — tenant role only */}
+          <Route path="/tenant/portal" element={<ProtectedRoute roles={['tenant']}><TenantPortalPage /></ProtectedRoute>} />
+
+          {/* Maintenance — owner sees all, tenant sees their own (handled inside) */}
+          <Route path="/maintenance" element={<MaintenancePage />} />
 
           {/* Profile & Contact — all roles */}
           <Route path="/profile" element={<ProfilePage />} />

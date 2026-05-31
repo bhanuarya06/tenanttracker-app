@@ -10,7 +10,7 @@ const paymentSchema = new mongoose.Schema(
     paymentDate: { type: Date, required: true, default: Date.now },
     paymentMethod: {
       type: String,
-      enum: ['cash', 'check', 'bank_transfer', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'],
+      enum: ['cash', 'check', 'bank_transfer', 'upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'other'],
       required: true,
     },
     transactionId: { type: String, index: true, sparse: true },
@@ -51,7 +51,7 @@ paymentSchema.virtual('netAmount').get(function () {
 });
 
 paymentSchema.virtual('paymentType').get(function () {
-  const electronic = ['credit_card', 'debit_card', 'online', 'razorpay', 'bank_transfer'];
+  const electronic = ['upi', 'credit_card', 'debit_card', 'online', 'razorpay', 'bank_transfer'];
   return electronic.includes(this.paymentMethod) ? 'electronic' : 'manual';
 });
 

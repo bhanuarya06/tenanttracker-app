@@ -20,6 +20,7 @@ export const API_URLS = {
   PAYMENTS: '/api/payments',
   DASHBOARD: '/api/dashboard',
   UPLOADS: '/api/uploads',
+  MAINTENANCE: '/api/maintenance',
 };
 
 export default API_BASE_URL;

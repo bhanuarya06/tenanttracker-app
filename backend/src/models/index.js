@@ -5,5 +5,6 @@ const Bill = require('./Bill');
 const Payment = require('./Payment');
 const RefreshToken = require('./RefreshToken');
 const AuthorizationCode = require('./AuthorizationCode');
+const Maintenance = require('./Maintenance');
 
-module.exports = { User, Property, Tenant, Bill, Payment, RefreshToken, AuthorizationCode };
+module.exports = { User, Property, Tenant, Bill, Payment, RefreshToken, AuthorizationCode, Maintenance };

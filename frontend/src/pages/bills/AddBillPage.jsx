@@ -9,7 +9,9 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Card from '../../components/ui/Card';
 import { CHARGE_TYPES, MONTHS } from '../../config/constants';
+import { buildChargesPayload } from '../../utils/chargeTransformers';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../../utils/errorMessages';
 
 export default function AddBillPage() {
   const navigate = useNavigate();
@@ -34,6 +36,15 @@ export default function AddBillPage() {
   useEffect(() => {
     tenantService.getAll({ limit: 100, status: 'active' }).then((d) => setTenants(d.tenants || []));
   }, []);
+
+  // Auto-set due date to 5th of the selected month/year
+  useEffect(() => {
+    const y = Number(form.year);
+    const m = Number(form.month);
+    if (y >= 2000 && m >= 1 && m <= 12) {
+      setForm((prev) => ({ ...prev, dueDate: `${y}-${String(m).padStart(2, '0')}-05` }));
+    }
+  }, [form.month, form.year]);
 
   // Auto-fill rent when tenant selected
   useEffect(() => {
@@ -71,7 +82,7 @@ export default function AddBillPage() {
       await dispatch(createBill({
         tenant: form.tenant,
         billingPeriod: { month: Number(form.month), year: Number(form.year) },
-        charges,
+        charges: buildChargesPayload(charges),
         previousBalance: Number(form.previousBalance) || 0,
         dueDate: form.dueDate,
         notes: form.notes,
@@ -79,7 +90,7 @@ export default function AddBillPage() {
       toast.success('Bill created');
       navigate('/bills');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create bill');
+      toast.error(getErrorMessage(err, 'Failed to create bill'));
     } finally {
       setLoading(false);
     }
@@ -114,7 +125,7 @@ export default function AddBillPage() {
           {errors.charges && <p className="text-sm text-rose-600">{errors.charges}</p>}
 
           <div className="grid grid-cols-2 gap-3">
-            {CHARGE_TYPES.map(({ key, label }) => (
+            {CHARGE_TYPES.filter((c) => c.key !== 'additionalCharges').map(({ key, label }) => (
               <Input
                 key={key} label={label} type="number" min="0" placeholder="0"
                 value={charges[key] || ''}

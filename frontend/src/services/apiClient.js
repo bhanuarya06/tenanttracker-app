@@ -54,8 +54,12 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        const wasAuthenticated = !!localStorage.getItem('user');
         tokenManager.clearToken();
         localStorage.removeItem('user');
+        if (wasAuthenticated) {
+          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

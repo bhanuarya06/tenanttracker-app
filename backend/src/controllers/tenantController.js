@@ -4,7 +4,7 @@ const { paginate, buildSort, escapeRegex } = require('../utils/query');
 const emailService = require('../services/emailService');
 
 exports.createTenant = async (req, res) => {
-  const { user: userData, property: propertyId, unit, rentType, monthlyRent, leaseDetails, occupantCount, occupants, emergencyContacts, preferences, status, moveInDate, notes } = req.body;
+  const { user: userData, property: propertyId, unit, rentType, monthlyRent, securityDeposit, leaseDetails, occupantCount, occupants, emergencyContacts, preferences, status, moveInDate, notes } = req.body;
 
   // Verify property ownership
   const property = await Property.findOne({ _id: propertyId, owner: req.user.userId });
@@ -44,6 +44,7 @@ exports.createTenant = async (req, res) => {
     owner: req.user.userId,
     rentType,
     monthlyRent,
+    securityDeposit: securityDeposit || 0,
     leaseDetails: rentType === 'lease' ? leaseDetails : undefined,
     occupantCount: occupantCount || (occupants?.length || 1),
     occupants,
@@ -51,6 +52,7 @@ exports.createTenant = async (req, res) => {
     preferences,
     status: status || 'active',
     moveInDate,
+    rentHistory: [{ amount: monthlyRent, effectiveDate: moveInDate || new Date(), reason: 'Initial rent', changedBy: req.user.userId }],
     notes: notes ? [{ content: notes, createdBy: req.user.userId }] : [],
     createdBy: req.user.userId,
   });
@@ -117,7 +119,7 @@ exports.getTenantById = async (req, res) => {
   const totalBilled = bills.reduce((s, b) => s + (b.totalAmount || 0), 0);
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = bills
-    .filter((b) => ['sent', 'partial', 'overdue'].includes(b.status))
+    .filter((b) => ['issued', 'partial', 'overdue'].includes(b.status))
     .reduce((s, b) => s + b.remainingBalance, 0);
   const overdue = bills
     .filter((b) => b.isOverdue)
@@ -131,8 +133,10 @@ exports.getTenantById = async (req, res) => {
 };
 
 exports.updateTenant = async (req, res) => {
-  const blocked = ['user', 'owner', 'property', 'createdBy'];
+  const blocked = ['user', 'owner', 'property', 'createdBy', 'rentHistory'];
   blocked.forEach((f) => delete req.body[f]);
+
+  const { rentChangeReason, rentEffectiveDate, ...rest } = req.body;
 
   const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
   if (!tenant) return sendError(res, 'Tenant not found', 404);
@@ -141,9 +145,9 @@ exports.updateTenant = async (req, res) => {
   const userFields = ['firstName', 'lastName', 'phone', 'dateOfBirth', 'gender', 'bio'];
   const userUpdate = {};
   userFields.forEach((f) => {
-    if (req.body[f] !== undefined) {
-      userUpdate[f] = req.body[f];
-      delete req.body[f];
+    if (rest[f] !== undefined) {
+      userUpdate[f] = rest[f];
+      delete rest[f];
     }
   });
 
@@ -152,21 +156,31 @@ exports.updateTenant = async (req, res) => {
   }
 
   // Check unit availability if changing unit
-  if (req.body.unit && req.body.unit !== tenant.unit) {
+  if (rest.unit && rest.unit !== tenant.unit) {
     const existing = await Tenant.findOne({
       property: tenant.property,
-      unit: req.body.unit,
+      unit: rest.unit,
       status: { $in: ['active', 'pending'] },
       _id: { $ne: tenant._id },
     });
     if (existing) return sendError(res, 'Unit is already occupied', 409);
   }
 
+  // Record rent change in history
+  if (rest.monthlyRent !== undefined && Number(rest.monthlyRent) !== tenant.monthlyRent) {
+    tenant.rentHistory.push({
+      amount: Number(rest.monthlyRent),
+      effectiveDate: rentEffectiveDate || new Date(),
+      reason: rentChangeReason || '',
+      changedBy: req.user.userId,
+    });
+  }
+
   // Track status change for availableUnits adjustment
   const wasActive = ['active', 'pending'].includes(tenant.status);
-  const willBeActive = req.body.status ? ['active', 'pending'].includes(req.body.status) : wasActive;
+  const willBeActive = rest.status ? ['active', 'pending'].includes(rest.status) : wasActive;
 
-  Object.assign(tenant, req.body);
+  Object.assign(tenant, rest);
   tenant.updatedBy = req.user.userId;
   await tenant.save();
 
@@ -190,7 +204,7 @@ exports.deleteTenant = async (req, res) => {
 
   const outstandingBills = await Bill.countDocuments({
     tenant: tenant._id,
-    status: { $in: ['sent', 'partial', 'overdue'] },
+    status: { $in: ['issued', 'partial', 'overdue'] },
   });
   if (outstandingBills > 0) {
     return sendError(res, 'Cannot delete tenant with outstanding bills', 400);
@@ -207,6 +221,36 @@ exports.getExpiringLeases = async (req, res) => {
   const days = parseInt(req.query.days) || 30;
   const tenants = await Tenant.findExpiringLeases(req.user.userId, days);
   return sendSuccess(res, 'Expiring leases fetched', { tenants, count: tenants.length });
+};
+
+exports.addDeposit = async (req, res) => {
+  const { amount, date, reason } = req.body;
+  const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
+  if (!tenant) return sendError(res, 'Tenant not found', 404);
+
+  tenant.depositAdditions.push({ amount: Number(amount), date: date || new Date(), reason: reason || '', addedBy: req.user.userId });
+  await tenant.save();
+  return sendSuccess(res, 'Deposit added', { depositAdditions: tenant.depositAdditions, totalDeposit: tenant.securityDeposit + tenant.depositAdditions.reduce((s, a) => s + a.amount, 0) });
+};
+
+exports.addDeduction = async (req, res) => {
+  const { category, description, amount } = req.body;
+  const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
+  if (!tenant) return sendError(res, 'Tenant not found', 404);
+
+  tenant.depositDeductions.push({ category, description: description || '', amount: Number(amount), addedBy: req.user.userId });
+  await tenant.save();
+  return sendSuccess(res, 'Deduction added', { depositDeductions: tenant.depositDeductions });
+};
+
+exports.updateDepositRefund = async (req, res) => {
+  const { status, paidAmount, paidDate, paymentMode, notes } = req.body;
+  const tenant = await Tenant.findOne({ _id: req.params.id, owner: req.user.userId });
+  if (!tenant) return sendError(res, 'Tenant not found', 404);
+
+  tenant.depositRefund = { status, paidAmount: Number(paidAmount) || 0, paidDate: paidDate || undefined, paymentMode, notes: notes || '' };
+  await tenant.save();
+  return sendSuccess(res, 'Refund updated', { depositRefund: tenant.depositRefund });
 };
 
 exports.addTenantNote = async (req, res) => {
@@ -228,13 +272,15 @@ exports.getTenantDashboard = async (req, res) => {
 
   if (!tenant) return sendError(res, 'No active tenancy found', 404);
 
-  const bills = await Bill.find({ tenant: tenant._id }).sort('-billingPeriod.year -billingPeriod.month').limit(12);
-  const payments = await Payment.find({ tenant: tenant._id, status: 'completed' }).sort('-paymentDate').limit(10);
+  const [bills, payments] = await Promise.all([
+    Bill.find({ tenant: tenant._id, status: { $ne: 'draft' } }).sort('-billingPeriod.year -billingPeriod.month').limit(12),
+    Payment.find({ tenant: tenant._id, status: 'completed' }).sort('-paymentDate').limit(10),
+  ]);
 
-  const currentBill = bills.find((b) => ['sent', 'partial', 'overdue'].includes(b.status));
+  const currentBill = bills.find((b) => ['issued', 'partial', 'overdue'].includes(b.status));
   const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = bills
-    .filter((b) => ['sent', 'partial', 'overdue'].includes(b.status))
+    .filter((b) => ['issued', 'partial', 'overdue'].includes(b.status))
     .reduce((s, b) => s + b.remainingBalance, 0);
 
   return sendSuccess(res, 'Dashboard fetched', {
@@ -243,7 +289,7 @@ exports.getTenantDashboard = async (req, res) => {
       monthlyRent: tenant.monthlyRent,
       outstanding,
       totalPaid,
-      securityDeposit: tenant.leaseDetails?.securityDeposit || 0,
+      securityDeposit: tenant.securityDeposit || 0,
       rentType: tenant.rentType,
       leaseStatus: tenant.leaseStatus,
     },

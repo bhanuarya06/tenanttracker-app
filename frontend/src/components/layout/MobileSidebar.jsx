@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { X, LayoutDashboard, Building2, Users, Receipt, CreditCard, Home } from 'lucide-react';
+import { X, LayoutDashboard, Building2, Users, Receipt, CreditCard, Home, FileText, Wrench } from 'lucide-react';
 import { closeMobileSidebar } from '../../store/slices/uiSlice';
 import { APP_NAME, ROLES } from '../../config/constants';
 
@@ -10,12 +10,15 @@ const ownerNav = [
   { to: '/tenants', icon: Users, label: 'Tenants' },
   { to: '/bills', icon: Receipt, label: 'Bills' },
   { to: '/payments', icon: CreditCard, label: 'Payments' },
+  { to: '/maintenance', icon: Wrench, label: 'Maintenance' },
 ];
 
 const tenantNav = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/tenant/portal', icon: FileText, label: 'My Lease' },
   { to: '/bills', icon: Receipt, label: 'My Bills' },
   { to: '/payments', icon: CreditCard, label: 'Payments' },
+  { to: '/maintenance', icon: Wrench, label: 'Maintenance' },
 ];
 
 export default function MobileSidebar() {
