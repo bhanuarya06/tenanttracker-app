@@ -9,7 +9,7 @@ parallel = true
 
 [default.deploy.parameters]
 stack_name        = "tenanttracker-lambda"
-s3_bucket         = "tenanttracker-sam-artifacts-667802015944"
+resolve_s3        = true
 s3_prefix         = "tenanttracker"
 region            = "us-east-1"
 confirm_changeset = false

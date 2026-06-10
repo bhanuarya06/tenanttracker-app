@@ -9,7 +9,6 @@ on:
 env:
   AWS_REGION: us-east-1
   SAM_STACK_NAME: tenanttracker-lambda
-  SAM_ARTIFACTS_BUCKET: tenanttracker-sam-artifacts-667802015944
 
 jobs:
   deploy:
@@ -39,11 +38,6 @@ jobs:
         uses: aws-actions/setup-sam@v2
         with:
           use-installer: true
-
-      # ── Ensure SAM artifact bucket exists ─────────────────────────────────
-      - name: Create SAM artifact bucket (idempotent)
-        run: |
-          aws s3 mb s3://$SAM_ARTIFACTS_BUCKET --region $AWS_REGION 2>/dev/null || true
 
       # ── Install backend dependencies ───────────────────────────────────────
       - name: Install backend dependencies
