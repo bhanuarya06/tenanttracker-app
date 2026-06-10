@@ -5,7 +5,7 @@ Description: TenantTracker — Lambda + API Gateway
 Globals:
   Function:
     Runtime: nodejs20.x
-    Timeout: 30
+    Timeout: 60
     MemorySize: 512
     Architectures: [x86_64]
 
