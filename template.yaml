@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: TenantTracker — Lambda + API Gateway + EventBridge (CloudFront deployed separately)
+Description: TenantTracker — Lambda + API Gateway
 
 Globals:
   Function:
@@ -8,51 +8,9 @@ Globals:
     Timeout: 30
     MemorySize: 512
     Architectures: [x86_64]
-    Environment:
-      Variables:
-        NODE_ENV: production
-        CORS_ORIGIN: https://tenanttracker.online
-        FRONTEND_URL: https://tenanttracker.online
 
 Resources:
 
-  # ── S3: file uploads (public-read so images work without CloudFront) ────────
-  UploadsBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub tenanttracker-uploads-${AWS::AccountId}
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders: ['*']
-            AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
-            AllowedOrigins:
-              - https://tenanttracker.online
-              - http://localhost:5173
-            MaxAge: 3600
-
-  UploadsBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref UploadsBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub ${UploadsBucket.Arn}/*
-
-  # ── S3: React frontend static site (used when CloudFront is added later) ───
-  FrontendBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub tenanttracker-frontend-${AWS::AccountId}
-
-  # ── API Gateway HTTP API ────────────────────────────────────────────────────
   TenantTrackerApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -75,18 +33,20 @@ Resources:
         AllowCredentials: true
         MaxAge: 300
 
-  # ── Lambda: main Express API ────────────────────────────────────────────────
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: tenanttracker-api
       Handler: src/lambda.handler
       CodeUri: backend/
-      Description: TenantTracker Express API (serverless)
+      Description: TenantTracker Express API
       Environment:
         Variables:
-          UPLOADS_BUCKET: !Ref UploadsBucket
-          AWS_UPLOADS_REGION: !Ref AWS::Region
+          NODE_ENV: production
+          CORS_ORIGIN: https://tenanttracker.online
+          FRONTEND_URL: https://tenanttracker.online
+          UPLOADS_BUCKET: tenanttracker-uploads-667802015944
+          AWS_UPLOADS_REGION: us-east-1
       Events:
         ApiRoot:
           Type: HttpApi
@@ -105,49 +65,15 @@ Resources:
           Statement:
             - Effect: Allow
               Action: [ssm:GetParameter, ssm:GetParameters]
-              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/tenanttracker/*
+              Resource: arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/*
             - Effect: Allow
               Action: kms:Decrypt
               Resource: '*'
             - Effect: Allow
               Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
-              Resource: !Sub ${UploadsBucket.Arn}/*
-
-  # ── Lambda: bill cron (replaces node-cron) ──────────────────────────────────
-  BillCronFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: tenanttracker-bill-cron
-      Handler: src/cron/billHandler.handler
-      CodeUri: backend/
-      Description: Generate monthly draft bills on the 1st of each month
-      Timeout: 300
-      Events:
-        MonthlySchedule:
-          Type: Schedule
-          Properties:
-            Schedule: cron(30 18 1 * ? *)
-            Description: Runs at 00:00 IST (18:30 UTC) on the 1st of every month
-            Enabled: true
-      Policies:
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action: [ssm:GetParameter, ssm:GetParameters]
-              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/tenanttracker/*
-            - Effect: Allow
-              Action: kms:Decrypt
-              Resource: '*'
+              Resource: arn:aws:s3:::tenanttracker-uploads-667802015944/*
 
 Outputs:
   ApiEndpoint:
-    Description: API Gateway HTTP API endpoint URL
-    Value: !Sub https://${TenantTrackerApi}.execute-api.${AWS::Region}.amazonaws.com
-
-  UploadsBucket:
-    Description: S3 bucket for user-uploaded files
-    Value: !Ref UploadsBucket
-
-  FrontendBucket:
-    Description: S3 bucket — deploy React dist/ here, then add CloudFront
-    Value: !Ref FrontendBucket
+    Description: Live API URL
+    Value: !Sub https://${TenantTrackerApi}.execute-api.us-east-1.amazonaws.com
