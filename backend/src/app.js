@@ -40,8 +40,14 @@ if (config.env === 'production') {
   app.use('/api', apiLimiter);
 }
 
-// Serve uploaded files (local/ECS only — in Lambda, CloudFront routes /uploads/* directly to S3)
-if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+// Serve uploaded files
+if (process.env.UPLOADS_BUCKET) {
+  // Lambda: redirect legacy /uploads/:filename URLs to S3
+  app.get('/uploads/:filename', (req, res) => {
+    const region = process.env.AWS_UPLOADS_REGION || 'us-east-1';
+    res.redirect(302, `https://${process.env.UPLOADS_BUCKET}.s3.${region}.amazonaws.com/${req.params.filename}`);
+  });
+} else {
   const path = require('path');
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 }

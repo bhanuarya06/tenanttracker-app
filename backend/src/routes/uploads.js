@@ -20,10 +20,13 @@ router.post(
   },
   (req, res) => {
     if (!req.file) return sendError(res, 'No image file provided', 400);
-    // multer-s3 sets req.file.key (e.g. "uploads/uuid.jpg"); disk sets req.file.filename
-    const filename = req.file.filename || require('path').basename(req.file.key);
-    const url = `/uploads/${filename}`;
-    return sendSuccess(res, 'Image uploaded', { url, filename });
+    if (req.file.location) {
+      // multer-s3: req.file.location is the full S3 URL
+      return sendSuccess(res, 'Image uploaded', { url: req.file.location, filename: req.file.key });
+    }
+    // Disk storage (local/ECS)
+    const url = `/uploads/${req.file.filename}`;
+    return sendSuccess(res, 'Image uploaded', { url, filename: req.file.filename });
   }
 );
 

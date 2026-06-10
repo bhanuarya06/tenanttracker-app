@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: TenantTracker — serverless backend (Lambda + API Gateway) and frontend (S3 + CloudFront)
+Description: TenantTracker — Lambda + API Gateway + EventBridge (CloudFront deployed separately)
 
 Globals:
   Function:
@@ -16,11 +16,16 @@ Globals:
 
 Resources:
 
-  # ── S3: file uploads ────────────────────────────────────────────────────────
+  # ── S3: file uploads (public-read so images work without CloudFront) ────────
   UploadsBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub tenanttracker-uploads-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
@@ -37,122 +42,15 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
+            Principal: '*'
             Action: s3:GetObject
             Resource: !Sub ${UploadsBucket.Arn}/*
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
 
-  # ── S3: React frontend static site ─────────────────────────────────────────
+  # ── S3: React frontend static site (used when CloudFront is added later) ───
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub tenanttracker-frontend-${AWS::AccountId}
-
-  FrontendBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref FrontendBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
-            Action: s3:GetObject
-            Resource: !Sub ${FrontendBucket.Arn}/*
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
-
-  # ── CloudFront: OAC (shared by both S3 buckets) ────────────────────────────
-  CloudFrontOAC:
-    Type: AWS::CloudFront::OriginAccessControl
-    Properties:
-      OriginAccessControlConfig:
-        Name: tenanttracker-s3-oac
-        OriginAccessControlOriginType: s3
-        SigningBehavior: always
-        SigningProtocol: sigv4
-
-  # ── CloudFront: distribution ────────────────────────────────────────────────
-  CloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Comment: TenantTracker
-        Enabled: true
-        HttpVersion: http2and3
-        PriceClass: PriceClass_100
-        DefaultRootObject: index.html
-        Origins:
-          - Id: FrontendS3
-            DomainName: !GetAtt FrontendBucket.RegionalDomainName
-            S3OriginConfig:
-              OriginAccessIdentity: ''
-            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
-          - Id: UploadsBucketOrigin
-            DomainName: !GetAtt UploadsBucket.RegionalDomainName
-            S3OriginConfig:
-              OriginAccessIdentity: ''
-            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
-          - Id: BackendApi
-            DomainName: !Sub ${TenantTrackerApi}.execute-api.${AWS::Region}.amazonaws.com
-            CustomOriginConfig:
-              HTTPSPort: 443
-              OriginProtocolPolicy: https-only
-        # Default: serve React SPA from S3
-        DefaultCacheBehavior:
-          TargetOriginId: FrontendS3
-          ViewerProtocolPolicy: redirect-to-https
-          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # Managed-CachingOptimized
-          AllowedMethods: [GET, HEAD, OPTIONS]
-          Compress: true
-        CacheBehaviors:
-          # API calls → Lambda
-          - PathPattern: /api/*
-            TargetOriginId: BackendApi
-            ViewerProtocolPolicy: https-only
-            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # Managed-CachingDisabled
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac  # Managed-AllViewerExceptHostHeader
-          # Auth routes → Lambda
-          - PathPattern: /auth/*
-            TargetOriginId: BackendApi
-            ViewerProtocolPolicy: https-only
-            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
-          # OAuth routes → Lambda
-          - PathPattern: /oauth*
-            TargetOriginId: BackendApi
-            ViewerProtocolPolicy: https-only
-            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
-          # Health check → Lambda
-          - PathPattern: /health
-            TargetOriginId: BackendApi
-            ViewerProtocolPolicy: https-only
-            AllowedMethods: [GET, HEAD]
-            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
-          # Uploaded images → S3
-          - PathPattern: /uploads/*
-            TargetOriginId: UploadsBucketOrigin
-            ViewerProtocolPolicy: redirect-to-https
-            AllowedMethods: [GET, HEAD, OPTIONS]
-            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # Managed-CachingOptimized
-            Compress: true
-        # SPA fallback: 403/404 from S3 → serve index.html
-        CustomErrorResponses:
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
 
   # ── API Gateway HTTP API ────────────────────────────────────────────────────
   TenantTrackerApi:
@@ -188,6 +86,7 @@ Resources:
       Environment:
         Variables:
           UPLOADS_BUCKET: !Ref UploadsBucket
+          AWS_UPLOADS_REGION: !Ref AWS::Region
       Events:
         ApiRoot:
           Type: HttpApi
@@ -227,7 +126,7 @@ Resources:
         MonthlySchedule:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: cron(30 18 1 * ? *)   # 00:00 IST = 18:30 UTC
+            ScheduleExpression: cron(30 18 1 * ? *)
             ScheduleExpressionTimezone: Asia/Kolkata
             Name: tenanttracker-monthly-billing
             Description: Runs at midnight IST on the 1st of every month
@@ -246,18 +145,10 @@ Outputs:
     Description: API Gateway HTTP API endpoint URL
     Value: !Sub https://${TenantTrackerApi}.execute-api.${AWS::Region}.amazonaws.com
 
-  CloudFrontDomain:
-    Description: CloudFront domain name — update tenanttracker.online CNAME to point here
-    Value: !GetAtt CloudFrontDistribution.DomainName
-
-  CloudFrontUrl:
-    Description: Live HTTPS URL via CloudFront
-    Value: !Sub https://${CloudFrontDistribution.DomainName}
-
-  FrontendBucket:
-    Description: S3 bucket — deploy React dist/ here
-    Value: !Ref FrontendBucket
-
   UploadsBucket:
     Description: S3 bucket for user-uploaded files
     Value: !Ref UploadsBucket
+
+  FrontendBucket:
+    Description: S3 bucket — deploy React dist/ here, then add CloudFront
+    Value: !Ref FrontendBucket

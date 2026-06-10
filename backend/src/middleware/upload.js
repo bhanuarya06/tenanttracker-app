@@ -34,7 +34,7 @@ if (process.env.UPLOADS_BUCKET) {
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: (_req, file, cb) => {
       const ext = ALLOWED_TYPES[file.mimetype] || path.extname(file.originalname);
-      cb(null, `uploads/${crypto.randomUUID()}${ext}`);
+      cb(null, `${crypto.randomUUID()}${ext}`);
     },
   });
 } else {
