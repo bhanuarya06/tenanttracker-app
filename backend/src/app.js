@@ -40,9 +40,11 @@ if (config.env === 'production') {
   app.use('/api', apiLimiter);
 }
 
-// Serve uploaded files
-const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files (local/ECS only — in Lambda, CloudFront routes /uploads/* directly to S3)
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  const path = require('path');
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+}
 
 // Routes
 app.use(routes);
