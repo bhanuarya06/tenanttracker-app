@@ -124,12 +124,11 @@ Resources:
       Timeout: 300
       Events:
         MonthlySchedule:
-          Type: ScheduleV2
+          Type: Schedule
           Properties:
-            ScheduleExpression: cron(30 18 1 * ? *)
-            ScheduleExpressionTimezone: Asia/Kolkata
-            Name: tenanttracker-monthly-billing
-            Description: Runs at midnight IST on the 1st of every month
+            Schedule: cron(30 18 1 * ? *)
+            Description: Runs at 00:00 IST (18:30 UTC) on the 1st of every month
+            Enabled: true
       Policies:
         - Version: '2012-10-17'
           Statement:
