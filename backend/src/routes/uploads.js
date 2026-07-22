@@ -20,6 +20,11 @@ router.post(
   },
   (req, res) => {
     if (!req.file) return sendError(res, 'No image file provided', 400);
+    if (req.file.location) {
+      // multer-s3: req.file.location is the full S3 URL
+      return sendSuccess(res, 'Image uploaded', { url: req.file.location, filename: req.file.key });
+    }
+    // Disk storage (local/ECS)
     const url = `/uploads/${req.file.filename}`;
     return sendSuccess(res, 'Image uploaded', { url, filename: req.file.filename });
   }

@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TenantTracker — Lambda + API Gateway
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 60
+    MemorySize: 512
+    Architectures: [x86_64]
+
+Resources:
+
+  TenantTrackerApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: tenanttracker-api
+      CorsConfiguration:
+        AllowOrigins:
+          - https://tenanttracker.online
+          - http://localhost:5173
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - Cookie
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        AllowCredentials: true
+        MaxAge: 300
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: tenanttracker-api
+      Handler: src/lambda.handler
+      CodeUri: backend/
+      Description: TenantTracker Express API
+      Environment:
+        Variables:
+          NODE_ENV: production
+          CORS_ORIGIN: https://tenanttracker.online
+          FRONTEND_URL: https://tenanttracker.online
+          UPLOADS_BUCKET: tenanttracker-uploads-667802015944
+          AWS_UPLOADS_REGION: us-east-1
+      Events:
+        ApiRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TenantTrackerApi
+            Path: /
+            Method: ANY
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TenantTrackerApi
+            Path: /{proxy+}
+            Method: ANY
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: [ssm:GetParameter, ssm:GetParameters]
+              Resource: arn:aws:ssm:us-east-1:667802015944:parameter/tenanttracker/*
+            - Effect: Allow
+              Action: kms:Decrypt
+              Resource: '*'
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
+              Resource: arn:aws:s3:::tenanttracker-uploads-667802015944/*
+
+Outputs:
+  ApiEndpoint:
+    Description: Live API URL
+    Value: !Sub https://${TenantTrackerApi}.execute-api.us-east-1.amazonaws.com

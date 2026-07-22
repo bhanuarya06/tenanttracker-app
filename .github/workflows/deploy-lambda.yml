@@ -1,0 +1,71 @@
+name: Deploy to Lambda
+
+on:
+  push:
+    branches:
+      - stableVersion
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  SAM_STACK_NAME: tenanttracker-lambda
+
+jobs:
+  deploy:
+    name: Build and Deploy (Lambda + API Gateway)
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      # ── Install backend dependencies ───────────────────────────────────────
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      # ── SAM build ──────────────────────────────────────────────────────────
+      - name: SAM build
+        run: sam build --config-file samconfig.toml
+
+      # ── SAM deploy ─────────────────────────────────────────────────────────
+      - name: SAM deploy
+        run: |
+          sam deploy \
+            --config-file samconfig.toml \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
+
+      # ── Print stack outputs ────────────────────────────────────────────────
+      - name: Deployment summary
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name $SAM_STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text)
+          UPLOADS=$(aws cloudformation describe-stacks \
+            --stack-name $SAM_STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='UploadsBucket'].OutputValue" \
+            --output text)
+          echo "Lambda API: $API_URL"
+          echo "Uploads bucket: $UPLOADS"

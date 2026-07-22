@@ -41,8 +41,16 @@ if (config.env === 'production') {
 }
 
 // Serve uploaded files
-const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+if (process.env.UPLOADS_BUCKET) {
+  // Lambda: redirect legacy /uploads/:filename URLs to S3
+  app.get('/uploads/:filename', (req, res) => {
+    const region = process.env.AWS_UPLOADS_REGION || 'us-east-1';
+    res.redirect(302, `https://${process.env.UPLOADS_BUCKET}.s3.${region}.amazonaws.com/${req.params.filename}`);
+  });
+} else {
+  const path = require('path');
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+}
 
 // Routes
 app.use(routes);
